@@ -15,4 +15,6 @@ router.get('/:id', studentController.getStudent);
 router.put('/:id', studentController.updateStudent);
 //update status
 router.patch('/:id', studentController.onStatusChange);
+//student Approve
+router.patch('/student-approve/:id', studentController.studentApprove);
 module.exports = router;

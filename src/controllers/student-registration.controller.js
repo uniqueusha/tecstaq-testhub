@@ -202,8 +202,6 @@ const onStatusChange = async (req, res) => {
             message: `Student ${statusMessage} successfully.`,
         });
     } catch (error) {
-        console.log(error);
-        
         return error500(error, res);
     } finally {
         if (connection) connection.release()
@@ -348,6 +346,49 @@ const getStudentsWma = async (req, res) => {
     }
 }
 
+// Student approve...
+const studentApprove = async (req, res) => {
+    const studentId = parseInt(req.params.id);
+    const is_approved = parseInt(req.query.is_approved); // Validate and parse the status parameter
+
+
+    // attempt to obtain a database connection
+    let connection = await getConnection();
+
+    try {
+
+        //start a transaction
+        await connection.beginTransaction();
+
+        // Check if Student exists
+        const isStudentExist = "SELECT * FROM student_registration WHERE student_id  = ?";
+        const isStudentResult = await pool.query(isStudentExist,[studentId]);
+        if (isStudentResult[0].length == 0) {
+            return error422("Student not found.", res);
+        }
+
+        // Soft update the student status
+        const updateQuery = `
+            UPDATE student_registration
+            SET is_approved = ?
+            WHERE student_id = ?
+        `;
+
+        await connection.query(updateQuery, [is_approved, studentId]);
+
+        // Commit the transaction
+        await connection.commit();
+        return res.status(200).json({
+            status: 200,
+            message: `Student Approved successfully.`,
+        });
+    } catch (error) {
+        return error500(error, res);
+    } finally {
+        if (connection) connection.release()
+    }
+};
+
 module.exports = {
     createStudent,
     getAllStudent,
@@ -355,5 +396,6 @@ module.exports = {
     updateStudent,
     onStatusChange,
     getStudent,
+    studentApprove
     
 }
