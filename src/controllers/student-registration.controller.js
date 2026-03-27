@@ -1,5 +1,4 @@
 
-const { log } = require("node:console");
 const pool = require("../../db");
 //const xlsx = require("xlsx");
 //const fs = require("fs");

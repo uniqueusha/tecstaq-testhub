@@ -1,284 +1,244 @@
-const pool = require('../../db');
+const pool = require("../../db");
 const bcrypt = require("bcrypt");
-const xlsx = require("xlsx");
+const jwt = require("jsonwebtoken");
+//const nodemailer = require("nodemailer");
+//const xlsx = require("xlsx");
 const fs = require("fs");
-const nodemailer = require("nodemailer");
 const path = require('path');
 
-const transporter = nodemailer.createTransport({
-    host: "smtp-mail.outlook.com",
-    port: 587,
-    secure: false,
-    auth: {
-        user: "support@tecstaq.com",
-        pass: "HelpMe@1212#$",
-    },
-    tls: {
-        rejectUnauthorized: false,
-    },
-});
-//function to obtain a database connection 
+// const transporter = nodemailer.createTransport({
+//     host: "smtp-mail.outlook.com",
+//     port: 587,
+//     secure: false,
+//     auth: {
+//         user: "support@tecstaq.com",
+//         pass: "Homeoffice@2025#$",
+//     },
+//     tls: {
+//         rejectUnauthorized: false,
+//     },
+//  });
+
+// Function to obtain a database connection
 const getConnection = async () => {
-    try {
-        const connection = await pool.getConnection();
-        return connection;
-    } catch (error) {
-        throw new Error("Failed to obtain database connection:" + error.message);
-    }
-}
+  try {
+    const connection = await pool.getConnection();
+    return connection;
+  } catch (error) {
+    throw new Error("Failed to obtain database connection: " + error.message);
+  }
+};
 
-const error422 = (message, res) => {
-    return res.status(422).json({
-        status: 422,
-        message: message
-    })
-}
-const error500 = (error, res) => {
-    console.log(error);
-    return res.status(500).json({
-        status: 500,
-        message: "Internal Server Error",
-        error: error
-    })
-}
+//error handle 422...
+error422 = (message, res) => {
+  return res.status(422).json({
+    status: 422,
+    message: message,
+  });
+};
+
+//error handle 500...
+error500 = (error, res) => {
+  return res.status(500).json({
+    status: 500,
+    message: "Internal Server Error",
+    error: error,
+  });
+};
+
+//error 404 handler...
+error404 = (message, res) => {
+  return res.status(404).json({
+    status: 404,
+    message: message,
+  });
+};
+
+//create user
 const createUser = async (req, res) => {
-    const employee_id = req.body.employee_id ? req.body.employee_id : '';
-    const role = req.body.role ? req.body.role.trim() : '';
-    const password = req.body.password ? req.body.password : '';
+  const user_name = req.body.user_name ? req.body.user_name.trim() : "";
+  const email_id = req.body.email_id ? req.body.email_id.trim() : "";
+  const mobile_number = req.body.mobile_number ? req.body.mobile_number : '';
+  const role = req.body.role ? req.body.role.trim() : "";
+  const password = "123456";
 
-    if (!employee_id) {
-        return error422("Employee id is required.", res);
-    } else if (!role) {
-        return error422("Role is required.", res);
-    } else if (!password) {
-        return error422("Password is required.", res);
-    }
+  if (!user_name) {
+    return error422("User name is required.", res);
+  } else if (!email_id) {
+    return error422("Email id is required.", res);
+  } else if (!mobile_number) {
+    return error422("Phone number is required.", res);
+  } else if (!password) {
+    return error422("Password is required.", res);
+  } else if (!role) {
+    return error422("Role is required.", res);
+  }
 
-    // Check if employee exists
-    const checkEmployeeQuery = "SELECT * FROM employee WHERE employee_id = ? ";
-    const [checkEmployeeResult] = await pool.query(checkEmployeeQuery, [employee_id]);
-    let employee_code = checkEmployeeResult[0].employee_code;
+    // //check User Name already is exists or not
+    // const isExistUserNameQuery = `SELECT * FROM users WHERE LOWER(TRIM(user_name))= ?`;
+    // const isExistUserNameResult = await pool.query(isExistUserNameQuery, [user_name.toLowerCase()]);
+    // if (isExistUserNameResult[0].length > 0) {
+    //     return error422(" User Name is already exists.", res);
+    // }
 
-    if (!checkEmployeeResult[0]) {
-        return error422('Employee Not Found.', res);
-    }
-    let employee = checkEmployeeResult[0]
-    // Check if employee in user exists
-    const checkEmployeeUserQuery = "SELECT * FROM users WHERE employee_id = ? ";
-    const checkEmployeeUserResult = await pool.query(checkEmployeeUserQuery, [employee_id]);
-    if (checkEmployeeUserResult[0].length > 0) {
-        return error422('Employee is already exists.', res);
-    }
+    // // Check if email_id exists
+    // const checkUserQuery = "SELECT * FROM users WHERE LOWER(TRIM(email_id)) = ? AND status = 1";
+    // const checkUserResult = await pool.query(checkUserQuery, [email_id.toLowerCase()]);
+    // if (checkUserResult[0].length > 0) {
+    //     return error422('Email id is already exists.', res);
+    // }
+    
     // Attempt to obtain a database connection
-    let connection = await pool.getConnection();
+    let connection = await getConnection();
     try {
         //Start the transaction
         await connection.beginTransaction();
-        //insert into users
-        const insertUserQuery = `INSERT INTO users (first_name, last_name, email_id, mobile_number, role, employee_id) VALUES (?, ?, ?, ?, ?, ?)`;
-        const insertUserValues = [employee.first_name, employee.last_name, employee.email, employee.mobile_number, role, employee_id];
-        const insertUserResult = await connection.query(insertUserQuery, insertUserValues);
-        const user_id = insertUserResult[0].insertId;
-
+        //insert into user
+        const insertUserQuery = `INSERT INTO users (user_name, email_id, mobile_number, role ) VALUES (?, ?, ?, ?)`;
+        const insertUserValues = [ user_name, email_id, mobile_number, role];
+        const insertuserResult = await connection.query(insertUserQuery, insertUserValues);
+        const user_id = insertuserResult[0].insertId;
+        
         const hash = await bcrypt.hash(password, 10); // Hash the password using bcrypt
 
         //insert into Untitled
-        const insertUntitledQuery = "INSERT INTO untitled (user_id, extenstions) VALUES (?,?)";
+        const insertUntitledQuery =
+        "INSERT INTO untitled (user_id, extenstions) VALUES (?,?)";
         const insertUntitledValues = [user_id, hash];
         const untitledResult = await connection.query(insertUntitledQuery, insertUntitledValues)
-        // Update the employee record with new data
-        const updateQuery = `
-            UPDATE employee
-            SET employee_status = ?
-            WHERE employee_id = ?
-        `;
-        await connection.query(updateQuery, ['Active', employee_id]);
 
         //commit the transation
         await connection.commit();
-        let user_name = `${checkEmployeeResult[0].first_name} ${checkEmployeeResult[0].last_name}`;
-        let email_id = checkEmployeeResult[0].email;
-        let mobile_number = checkEmployeeResult[0].mobile_number;
-        // try {
-        // const message = `
-        // <!DOCTYPE html>
-        // <html lang="en">
-        // <head>
-        //   <meta charset="UTF-8">
-        //   <title>Welcome to test</title>
-        //   <style>
-        //       div{
-        //       font-family: Arial, sans-serif; 
-        //        margin: 0px;
-        //         padding: 0px;
-        //         color:black;
-        //       }
-        //   </style>
-        // </head>
-        // <body>
-        // <div>
-        // <h2 style="text-transform: capitalize;">Dear ${user_name},</h2>
-        // <h3>Welcome to HRMS!</h3>
-
-        // <p>Your employee profile has been successfully created in our HRMS system. Please find your login credentials below:</p>
-        // <p>HRMS Login Details</p>
-        // <p>Portal Link:<a href="https://hrms.tecstaq.com/">https://hrms.tecstaq.com/</a></P>
-        // <p>Employee ID: ${employee_code}</p>
-        // <p>Username : ${user_name}</p>
-        // <p>Temporary Password:${password}</p>
-        // <p>Important Instructions:</p>
-        //   <p>1.Please change your password on first login.</p>
-        //   <p>2.Do not share your login credentials with anyone.</p>
-        //   <p>3.Update your personal details (bank info, address, emergency contact, etc.) after login.</p>
-        //   <p>4.If you face any issues while logging in, please contact the HR department at ${email_id} / ${mobile_number}.</p>
-        // <p>We wish you a successful journey with us.</p>
-        //   <p>Best Regards,</p>
-        //   <p>HR Department</p>
-        //   <p><strong>HRMS</strong></p>
-
-        // </div>
-        // </body>
-        // </html>`;
-        const message = `
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Welcome to HRMS</title>
-</head>
-
-<body style="font-family: Arial, Helvetica, sans-serif; font-size:14px; color:#333; line-height:1.6;">
-
-<p>Dear ${user_name},</p>
-
-<p><strong>Welcome to HRMS!</strong></p>
-
-<p>
-We are pleased to inform you that your employee profile has been successfully created in our 
-Human Resource Management System (HRMS). Please find your login credentials below to access the portal.
-</p>
-
-<p><strong>HRMS Login Details:</strong></p>
-
-<p>
-<strong>Portal Link:</strong> 
-<a href="https://hrms.tecstaq.com/">https://hrms.tecstaq.com/</a>
-</p>
-
-<p><strong>Employee ID:</strong> ${employee_code}</p>
-<p><strong>Username:</strong> ${user_name}</p>
-<p><strong>Temporary Password:</strong> ${password}</p>
-
-<p><strong>Important Instructions:</strong></p>
-
-<ul>
-<li>Please change your password upon your first login.</li>
-<li>Do not share your login credentials with anyone.</li>
-<li>After logging in, kindly update your personal details such as bank information, address, and emergency contact details.</li>
-<li>If you experience any issues while accessing the portal, please contact the HR department at <strong>${email_id}</strong> or <strong>${mobile_number}</strong>.</li>
-</ul>
-
-<p>
-We wish you a successful and rewarding journey with our organization.
-</p>
-
-<p>Best Regards,</p>
-<p><strong>Tecstaq HRMS</strong></p>
-</body>
-</html>
-`;
-
-        // Prepare the email message options.
-        const mailOptions = {
-            from: "support@tecstaq.com", // Sender address from environment variables.
-            to: `${email_id}`, // Recipient's name and email address."sushantsjamdade@gmail.com",
-            // bcc: ["sushantsjamdade@gmail.com"],
-            subject: "Welcome to HRMS – Your HRMS Login Details", // Subject line.
-            html: message,
-        };
-
-        await transporter.sendMail(mailOptions);
-
         return res.status(200).json({
-            status: 200,
-            message: "Created User Successfully.",
+        status: 200,
+        message: `User created successfully.`,
         });
     } catch (error) {
         await connection.rollback();
         return error500(error, res);
     } finally {
-        if (connection) connection.release();
+        await connection.release();
     }
-}
-// get users
+};
+  
+//login
+const login = async (req, res) => {
+  let email_id = req.body.email_id ? req.body.email_id.trim() : "";
+  const password = req.body.password ? req.body.password.trim() : "";
+  if (!email_id) {
+    return error422("Email id is required.", res);
+  } else if (!password) {
+    return error422("Password is required.", res);
+  }
+  // Attempt to obtain a database connection
+  let connection = await getConnection();
+  try {
+    //Start the transaction
+    await connection.beginTransaction();
+    //check email id is exist
+    const query = `SELECT u.* FROM users u
+    WHERE TRIM(LOWER(u.email_id)) = ? AND u.status = 1`;
+    const result = await connection.query(query, [email_id.toLowerCase()]);
+    const check_user = result[0][0];
+    if (!check_user) {
+        return error422("Authentication failed.", res);
+    }
+
+// Check if the user with the provided Untitled id exists
+        const checkUserUntitledQuery = "SELECT * FROM untitled WHERE user_id = ?";
+        const [checkUserUntitledResult] = await connection.query(checkUserUntitledQuery, [check_user.user_id]);
+        const user_untitled = checkUserUntitledResult[0];
+        if (!user_untitled) {
+            return error422("Authentication failed.", res);
+        }
+
+        const isPasswordValid = await bcrypt.compare(password, user_untitled.extenstions);
+        if (!isPasswordValid) {
+            return error422("Password wrong.", res);
+        }
+        // Generate a JWT token
+        const token = jwt.sign(
+            {
+                user_id: user_untitled.user_id,
+                email_id: check_user.email_id,
+            },
+            "secret_this_should_be", // Use environment variable for secret key
+            { expiresIn: "1h" }
+        );
+        const userDataQuery = `SELECT u.* FROM users u
+        WHERE u.user_id = ? `;
+        let userDataResult = await connection.query(userDataQuery, [check_user.user_id]);
+
+        // Commit the transaction
+        await connection.commit();
+        return res.status(200).json({
+            status: 200,
+            message: "Authentication successfully",
+            token: token,
+            expiresIn: 36000, // 1 hour in seconds,
+            data: userDataResult[0][0],
+        });
+
+    } catch (error) {
+        return error500(error, res)
+    } finally {
+        await connection.release();
+    }
+};
+
+// get User list...
 const getUsers = async (req, res) => {
-    const { page, perPage, key, fromDate, toDate, employee_id } = req.query;
+    const { page, perPage, key } = req.query;
 
     // attempt to obtain a database connection
-    let connection = await pool.getConnection();
+    let connection = await getConnection();
 
     try {
 
         //start a transaction
         await connection.beginTransaction();
 
-        let getQuery = `SELECT u.*, e.title, e.employee_code, c.name AS company_name
-        FROM users u
-        LEFT JOIN employee e ON e.employee_id = u.employee_id
-        LEFT JOIN company c ON c.company_id = e.company_id
-        WHERE 1 AND u.role !="Management" `;
+        let getUserQuery = `SELECT u.* FROM users u WHERE 1`;
 
-        let countQuery = `SELECT COUNT(*) AS total 
-        FROM users u
-        LEFT JOIN employee e ON e.employee_id = u.employee_id
-        LEFT JOIN company c ON c.company_id = e.company_id
-        WHERE 1 AND u.role !="Management" `;
-
+        let countQuery = `SELECT COUNT(*) AS total FROM users u 
+        WHERE 1`;
 
         if (key) {
             const lowercaseKey = key.toLowerCase().trim();
-            getQuery += ` AND (LOWER(u.first_name) LIKE '%${lowercaseKey}%' || LOWER(u.last_name) LIKE '%${lowercaseKey}%' || LOWER(c.name) LIKE '%${lowercaseKey}%' || LOWER(u.mobile_number) LIKE '%${lowercaseKey}%')`;
-            countQuery += ` AND (LOWER(u.first_name) LIKE '%${lowercaseKey}%' || LOWER(u.last_name) LIKE '%${lowercaseKey}%' || LOWER(c.name) LIKE '%${lowercaseKey}%' || LOWER(u.mobile_number) LIKE '%${lowercaseKey}%')`;
+            if (lowercaseKey === "activated") {
+                getUserQuery += ` AND status = 1`;
+                countQuery += ` AND status = 1`;
+            } else if (lowercaseKey === "deactivated") {
+                getUserQuery += ` AND status = 0`;
+                countQuery += ` AND status = 0`;
+            } else {
+                getUserQuery += ` AND (LOWER(u.user_name) LIKE '%${lowercaseKey}%' || LOWER(u.role) LIKE '%${lowercaseKey}%')`;
+                countQuery += ` AND (LOWER(u.user_name) LIKE '%${lowercaseKey}%' || LOWER(u.role) LIKE '%${lowercaseKey}%')`;
+            }
         }
-        //from date and to date
-        if (fromDate && toDate) {
-            getQuery += ` AND DATE(u.cts) BETWEEN '${fromDate}' AND '${toDate}'`;
-            countQuery += ` AND DATE(u.cts) BETWEEN '${fromDate}' AND '${toDate}'`;
-        }
+        getUserQuery += " ORDER BY u.cts DESC";
 
-        // if (employee_id) {
-        //     getQuery += ` AND lq.employee_id = ${employee_id}`;
-        //     countQuery += `  AND lq.employee_id = ${employee_id}`;
-        // }
-        // if (approver_id) {
-        //     getQuery += ` AND lq.approver_id = ${approver_id}`;
-        //     countQuery += `  AND lq.approver_id = ${approver_id}`;
-        // }
-        // if (leave_type_id) {
-        //     getQuery += ` AND lq.leave_type_id = ${leave_type_id}`;
-        //     countQuery += `  AND lq.leave_type_id = ${leave_type_id}`;
-        // }
-         getQuery += ` ORDER BY u.cts DESC`;
-        // getQuery += " ORDER BY lq.applied_date DESC";
         // Apply pagination if both page and perPage are provided
         let total = 0;
         if (page && perPage) {
             const totalResult = await connection.query(countQuery);
             total = parseInt(totalResult[0][0].total);
+
             const start = (page - 1) * perPage;
-            getQuery += ` LIMIT ${perPage} OFFSET ${start}`;
+            getUserQuery += ` LIMIT ${perPage} OFFSET ${start}`;
         }
 
-        const result = await connection.query(getQuery);
-        const users = result[0];
+        const result = await connection.query(getUserQuery);
+        const user = result[0];
 
         // Commit the transaction
         await connection.commit();
         const data = {
             status: 200,
-            message: "Users retrieved successfully",
-            data: users,
+            message: "User retrieved successfully",
+            data: user,
         };
+
         // Add pagination information if provided
         if (page && perPage) {
             data.pagination = {
@@ -291,65 +251,64 @@ const getUsers = async (req, res) => {
 
         return res.status(200).json(data);
     } catch (error) {
-        await connection.rollback()
         return error500(error, res);
     } finally {
         if (connection) connection.release()
     }
 }
-// get user
+
+//User by id
 const getUser = async (req, res) => {
-    let user_id = parseInt(req.params.id)
+    const userId = parseInt(req.params.id);
+
     // attempt to obtain a database connection
-    let connection = await pool.getConnection();
+    let connection = await getConnection();
 
     try {
 
         //start a transaction
         await connection.beginTransaction();
 
-        let getQuery = `SELECT u.*
-        FROM users u
-        WHERE user_id = ${user_id}`;
-
-        const [result] = await connection.query(getQuery);
-        const users = result[0];
-        if (!users) {
-            return error422("User Not Found", res);
+        const userQuery = `SELECT u.* FROM users u WHERE 1 AND u.user_id = ? `;
+        const userResult = await connection.query(userQuery, [userId]);
+        if (userResult[0].length == 0) {
+            return error422("User Not Found.", res);
         }
+        const user = userResult[0];
 
-        // Commit the transaction
-        await connection.commit();
-        const data = {
+        return res.status(200).json({
             status: 200,
-            message: "User retrieved successfully",
-            data: users,
-        };
-
-        return res.status(200).json(data);
+            message: "User Retrived Successfully",
+            data: user
+        });
     } catch (error) {
-        await connection.rollback()
         return error500(error, res);
     } finally {
         if (connection) connection.release()
     }
 }
-//Update user
-const updateUser = async (req, res) => {
-    const user_id = parseInt(req.params.id);
-    const employee_id = req.body.employee_id ? req.body.employee_id : '';
-    const role = req.body.role ? req.body.role : '';
 
-    if (!employee_id) {
-        return error422("Employee id is required.", res);
+//Update User
+const updateUser = async (req, res) => {
+    const userId = parseInt(req.params.id);
+    const user_name = req.body.user_name ? req.body.user_name.trim() : "";
+    const email_id = req.body.email_id ? req.body.email_id.trim() : "";
+    const mobile_number = req.body.mobile_number ? req.body.mobile_number :'';
+    const role = req.body.role ? req.body.role.trim() : "";
+    if (!user_name) {
+        return error422("User name is required.", res);
+    } else if (!email_id) {
+        return error422("Email id is required.", res);
+    } else if (!mobile_number) {
+        return error422("Phone number is required.", res);
+    } else if (!password) {
+        return error422("Password is required.", res);
     } else if (!role) {
         return error422("Role is required.", res);
-    } else if (!user_id) {
-        return error422("User id is required.", res);
     }
 
     // attempt to obtain a database connection
-    let connection = await pool.getConnection();
+    let connection = await getConnection();
 
     try {
 
@@ -358,34 +317,23 @@ const updateUser = async (req, res) => {
 
         // Check if user exists
         const userQuery = "SELECT * FROM users WHERE user_id  = ?";
-        const userResult = await connection.query(userQuery, [user_id]);
-        if (userResult[0].length == 0) {
+        const userResult = await connection.query(userQuery, [userId]);
+        if (userResult[0].length === 0) {
             return error422("User Not Found.", res);
-        }
-        // Check if employee exists
-        const checkEmployeeQuery = "SELECT * FROM employee WHERE employee_id = ? ";
-        const [checkEmployeeResult] = await pool.query(checkEmployeeQuery, [employee_id]);
-        if (!checkEmployeeResult[0]) {
-            return error422('Employee Not Found.', res);
-        }
-        let employee = checkEmployeeResult[0]
-        // Check if the provided employee exists
-        const existingEmployeeQuery = "SELECT * FROM users WHERE employee_id = ? AND user_id !=? ";
-        const existingEmployeeResult = await connection.query(existingEmployeeQuery, [employee_id, user_id]);
-        if (existingEmployeeResult[0].length > 0) {
-            return error422("Employee already exists.", res);
         }
 
         // Update the user record with new data
         const updateQuery = `
             UPDATE users
-            SET first_name = ?, last_name = ?, email_id =?, mobile_number = ?, employee_id = ?, role = ?
+            SET user_name = ?, email_id = ?, mobile_number = ?, role = ?
             WHERE user_id = ?
         `;
-        await connection.query(updateQuery, [employee.first_name, employee.last_name, employee.email, employee.mobile_number, employee_id, role, user_id]);
+
+        await connection.query(updateQuery, [ user_name, email_id, mobile_number, role, userId]);
 
         // Commit the transaction
         await connection.commit();
+
         return res.status(200).json({
             status: 200,
             message: "User updated successfully.",
@@ -397,97 +345,111 @@ const updateUser = async (req, res) => {
     }
 }
 
-//download list
-const getUserDownload = async (req, res) => {
+//status change of user...
+const onStatusChange = async (req, res) => {
+    const userId = parseInt(req.params.id);
+    const status = parseInt(req.query.status); // Validate and parse the status parameter
 
-    const { key } = req.query;
 
+    // attempt to obtain a database connection
     let connection = await getConnection();
+
     try {
+
+        //start a transaction
         await connection.beginTransaction();
 
-        let getUserQuery = `SELECT u.*, e.title, e.employee_code, c.name
-        FROM users u
-        LEFT JOIN employee e ON e.employee_id = u.employee_id
-        LEFT JOIN company c ON c.company_id = e.company_id
-        WHERE 1 AND u.role !="Management" `;
-        if (key) {
-            const lowercaseKey = key.toLowerCase().trim();
-            getUserQuery += ` AND (LOWER(u.first_name) LIKE '%${lowercaseKey}%' || LOWER(u.last_name) LIKE '%${lowercaseKey}%' || LOWER(c.name) LIKE '%${lowercaseKey}%' || LOWER(u.mobile_number) LIKE '%${lowercaseKey}%')`;
-        }
-        getUserQuery += ` ORDER BY u.cts DESC`;
+        // Check if the user exists
+        const userQuery = "SELECT * FROM users WHERE user_id = ? ";
+        const userResult = await connection.query(userQuery, [userId]);
 
-        let result = await connection.query(getUserQuery);
-        let user = result[0];
-
-        if (user.length === 0) {
-            return error422("No data found.", res);
+        if (userResult[0].length == 0) {
+            return res.status(404).json({
+                status: 404,
+                message: "User not found.",
+            });
         }
 
-        user = user.map((item, index) => ({
-            "Sr No": index + 1,
-            "Code": item.employee_code,
-            "Name": `${item.first_name} ${item.last_name}`,
-            "Email": item.email_id,
-            "Mobile No": item.mobile_number,
-            "Company": item.name,
-            "Role": item.role,
-            "Status": item.status === 1 ? "activated" : "deactivated",
+        // Validate the status parameter
+        if (status !== 0 && status !== 1) {
+            return res.status(400).json({
+                status: 400,
+                message: "Invalid status value. Status must be 0 (inactive) or 1 (active).",
+            });
+        }
 
-        }));
+        // Soft update the user
+        const updateQuery = `
+            UPDATE users
+            SET status = ?
+            WHERE user_id = ?
+        `;
 
-        // Create a new workbook
-        const workbook = xlsx.utils.book_new();
+        await connection.query(updateQuery, [status, userId]);
 
-        // Create a worksheet and add only required columns
-        const worksheet = xlsx.utils.json_to_sheet(user);
-
-        // Add the worksheet to the workbook
-        xlsx.utils.book_append_sheet(workbook, worksheet, "userInfo");
-
-        // Create a unique file name
-        const excelFileName = `exported_data_${Date.now()}.xlsx`;
-
-        // Write the workbook to a file
-        xlsx.writeFile(workbook, excelFileName);
-
-        // Send the file to the client
-        res.download(excelFileName, (err) => {
-            if (err) {
-                console.error(err);
-                res.status(500).send("Error downloading the file.");
-            } else {
-                fs.unlinkSync(excelFileName);
-            }
-        });
-
+        const statusMessage = status === 1 ? "activated" : "deactivated";
+        // Commit the transaction
         await connection.commit();
+        return res.status(200).json({
+            status: 200,
+            message: `User ${statusMessage} successfully.`,
+        });
     } catch (error) {
         return error500(error, res);
     } finally {
-        if (connection) connection.release();
+        if (connection) connection.release()
     }
 };
 
+//get user active...
+const getUserWma = async (req, res) => {
+     const { department_id} = req.query;
+
+    // attempt to obtain a database connection
+    let connection = await getConnection();
+
+    try {
+
+        //start a transaction
+        await connection.beginTransaction();
+
+        let userQuery = `SELECT u.* FROM users u WHERE 1 AND u.status = 1`;
+        userQuery += ` ORDER BY u.user_name`;
+
+        const userResult = await connection.query(userQuery);
+        const user = userResult[0];
+
+        // Commit the transaction
+        await connection.commit();
+
+        return res.status(200).json({
+            status: 200,
+            message: "User retrieved successfully.",
+            data: user,
+        });
+    } catch (error) {
+        return error500(error, res);
+    } finally {
+        if (connection) connection.release()
+    }
+}
 
 //change password
 const onChangePassword = async (req, res) => {
-    //run validation
-    await Promise.all([
-        body('email_id').notEmpty().withMessage("Email id is required.").isEmail().withMessage("Invalid email id").run(req),
-        body('password').notEmpty().withMessage("Password is required.").run(req),
-        body('new_password').notEmpty().withMessage("New password is requierd.").isLength({ min: 8 }).withMessage("Password must be at least 8 characters long.")
-            .matches(/[0-9]/).withMessage("Password must contain at least one number.")
-            .matches(/[!@#$%^&*(),.?":{}|<>]/).withMessage("Password must contain at least one special character.").run(req)
-    ]);
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return error422(errors.array()[0].msg, res);
-    }
     const email_id = req.body.email_id ? req.body.email_id.trim() : "";
     const password = req.body.password || "";
     const new_password = req.body.new_password || "";
     const new_email = req.body.new_email ? req.body.new_email.trim() : "";
+
+    if (!email_id) {
+        return error422("Email Id required.", res);
+    }
+    if (!password) {
+        return error422("Password is required.", res);
+    }
+    if (!new_password) {
+        return error422("New password is required.", res);
+    }
 
     let connection = await getConnection();
 
@@ -559,22 +521,18 @@ const onChangePassword = async (req, res) => {
 
 //send otp 
 const sendOtp = async (req, res) => {
-    await Promise.all([
-        body('email_id').notEmpty().withMessage("Email id is required.").isEmail().withMessage("Invalid email id").run(req)
-    ]);
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return error422(errors.array()[0].msg, res)
-    }
     const email_id = req.body.email_id;
+    if (!email_id) {
+        return error422("Email is  required.", res);
+    }
     // Check if email_id exists
     const query = 'SELECT * FROM users WHERE TRIM(LOWER(email_id)) = ?';
     const result = await pool.query(query, [email_id.toLowerCase()]);
     if (result[0].length === 0) {
-        return error422('If the email is registered, an OTP will be sent.', res);
+        return error422('Email id is not found.', res);
     }
 
-    let first_name = result[0][0].first_name;
+    let user_name = result[0][0].user_name;
 
     let connection = await getConnection();
     try {
@@ -592,7 +550,7 @@ const sendOtp = async (req, res) => {
         <html lang="en">
         <head>
           <meta charset="UTF-8">
-          <title>Welcome to Tecstaq-hrms.com</title>
+          <title>Welcome to Tecstaq-helddesk.com</title>
           <style>
               div{
               font-family: Arial, sans-serif; 
@@ -604,17 +562,17 @@ const sendOtp = async (req, res) => {
         </head>
         <body>
         <div>
-       <h2 style="text-transform: capitalize;">Hello ${first_name},</h2>
-        <p>It seems you requested a password reset for your Tecstaq-hrms account. Use the OTP below to complete the process and regain access to your account.</p>
+       <h2 style="text-transform: capitalize;">Hello ${user_name},</h2>
+        <p>It seems you requested a password reset for your Tecstaq-helddesk account. Use the OTP below to complete the process and regain access to your account.</p>
         <h3>Your OTP: <strong>${otp}</strong></h3>
         <p>For security, this OTP will expire in 5 minutes. Please don’t share this code with anyone. If you didn’t request a password reset, please ignore this email or reach out to our support team for assistance.</p>
         <h4>What’s Next?</h4>
         <ol>
           <li>Enter the OTP on the password reset page.</li>
           <li>Set your new password, and you’re all set to log back in.</li>
-        <li>Thank you for using Tecstaq-hrms Application!</li>
+        <li>Thank you for using Tecstaq-helddesk Application!</li>
         </ol>
-        <p>Best regards,<br>The Tecstaq-hrms Team</p>
+        <p>Best regards,<br>The Tecstaq-helddesk Team</p>
          </div>
         </body>
         </html>`;
@@ -632,23 +590,20 @@ const sendOtp = async (req, res) => {
             to: `${email_id}`, // Recipient's name and email address.
             //    replyTo: "rohitlandage86@gmail.com", // Sets the email address for recipient responses.
             //  bcc: "sushantsjamdade@gmail.com",
-            bcc: "ushamyadav777@gmail.com",
-            subject: "Reset Your Tecstaq-hrms Password – OTP Inside", // Subject line.
+            // bcc: "sushantsjamdade@gmail.com",
+            subject: "Reset Your Tecstaq-crm Password – OTP Inside", // Subject line.
             html: message,
         };
 
-        try {
-            await transporter.sendMail(mailOptions);
-        } catch (mailError) {
-            // console.error("Error while sending mail:", mailError);
-        }
+        // Send email 
+        await transporter.sendMail(mailOptions);
+
         return res.status(200).json({
             status: 200,
             message: `OTP sent successfully to ${email_id}.`,
 
         })
     } catch (error) {
-        if (connection) connection.rollback();
         return error500(error, res)
     } finally {
         if (connection) connection.release()
@@ -657,16 +612,13 @@ const sendOtp = async (req, res) => {
 
 //verify otp
 const verifyOtp = async (req, res) => {
-    await Promise.all([
-        body('otp').notEmpty().withMessage("OTP is required.").isInt().withMessage("OTP must be a number.").isLength({ min: 6, max: 6 }).withMessage("Invalid OTP").run(req),
-        body('email_id').notEmpty().withMessage("Email id is required.").isEmail().withMessage("Invalid email id").run(req)
-    ]);
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return error422(errors.array()[0].msg, res)
-    }
     const otp = req.body.otp ? req.body.otp : null;
     const email_id = req.body.email_id ? req.body.email_id.trim() : null;
+    if (!otp) {
+        return error422("Otp is required.", res);
+    } else if (!email_id) {
+        return error422("Email id is required.", res);
+    }
 
     let connection = await getConnection();
     try {
@@ -714,15 +666,10 @@ const verifyOtp = async (req, res) => {
 
 //check email_id
 const checkEmailId = async (req, res) => {
-    //run validation
-    await Promise.all([
-        body('email_id').notEmpty().withMessage("Email id is required.").isEmail().withMessage("Invalid email id").run(req),
-    ]);
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return error422(errors.array()[0].msg, res);
-    }
     const email_id = req.body.email_id ? req.body.email_id.trim() : ""; // Extract and trim email_id from request body
+    if (!email_id) {
+        return error422("Email Id required.", res);
+    }
 
     let connection = await getConnection();
     try {
@@ -751,26 +698,16 @@ const checkEmailId = async (req, res) => {
 
 //forget password
 const forgotPassword = async (req, res) => {
-    await Promise.all([
-        body('email_id').notEmpty().withMessage("Email id is required.").isEmail().withMessage("Invalid email id").run(req),
-        body('otp').notEmpty().withMessage("OTP is required.").isInt().withMessage("OTP must be a number.").isLength({ min: 6, max: 6 }).withMessage("Invalid OTP").run(req),
-        body('newPassword').notEmpty().withMessage("New password is required.").isLength({ min: 8 }).withMessage("Password must be at least 8 characters long.")
-            .matches(/[0-9]/).withMessage("Password must contain at least one number.")
-            .matches(/[!@#$%^&*(),.?":{}|<>]/).withMessage("Password must contain at least one special character.").run(req),
-        body('confirmPassword').notEmpty().withMessage("Confirm password is requierd.").isLength({ min: 8 }).withMessage("Password must be at least 8 characters long.")
-            .matches(/[0-9]/).withMessage("Password must contain at least one number.")
-            .matches(/[!@#$%^&*(),.?":{}|<>]/).withMessage("Password must contain at least one special character.").run(req)
-
-    ]);
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return error422(errors.array()[0].msg, res);
-    }
     const email_id = req.body.email_id ? req.body.email_id.trim() : null;
-    const otp = req.body.otp ? req.body.otp : null;
     const newPassword = req.body.newPassword ? req.body.newPassword.trim() : null;
     const confirmPassword = req.body.confirmPassword ? req.body.confirmPassword.trim() : null;
-    if (newPassword !== confirmPassword) {
+    if (!email_id) {
+        return error422("Email id is requried", res);
+    } else if (!newPassword) {
+        return error422("New password is required.", res);
+    } else if (!confirmPassword) {
+        return error422("Confirm password is required.", res);
+    } else if (newPassword !== confirmPassword) {
         return error422("New password and Confirm password do not match.", res);
     }
 
@@ -778,16 +715,7 @@ const forgotPassword = async (req, res) => {
     try {
         //Start the transaction
         await connection.beginTransaction();
-        // Check if OTP is valid and not expired
-        const verifyOtpQuery = `
-        SELECT * FROM otp 
-        WHERE TRIM(LOWER(email_id)) = ? AND otp = ?`;
-        const verifyOtpResult = await connection.query(verifyOtpQuery, [email_id.trim().toLowerCase(), otp]);
 
-        // If no OTP is found, return a failed verification message
-        if (verifyOtpResult[0].length === 0) {
-            return error422("OTP verification failed.", res);
-        }
         // Check if email_id exists
         const query = 'SELECT * FROM users WHERE TRIM(LOWER(email_id)) = ?';
         const result = await connection.query(query, [email_id.toLowerCase()]);
@@ -816,15 +744,10 @@ const forgotPassword = async (req, res) => {
 };
 
 const sendOtpIfEmailIdNotExists = async (req, res) => {
-    //run validation
-    await Promise.all([
-        body('email_id').notEmpty().withMessage("Email id is required.").isEmail().withMessage("Invalid email id").run(req),
-    ]);
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-        return error422(errors.array()[0].msg, res);
-    }
     const email_id = req.body.email_id;
+    if (!email_id) {
+        return error422("Email is required.", res);
+    }
 
     // Check if email_id exists
     const query = 'SELECT * FROM users WHERE TRIM(LOWER(email_id)) = ?';
@@ -857,7 +780,7 @@ const sendOtpIfEmailIdNotExists = async (req, res) => {
         <html lang="en">
         <head>
           <meta charset="UTF-8">
-          <title>Welcome to Tecstaq-hrms.com</title>
+          <title>Welcome to Tecstaq-helpdesk.com</title>
           <style>
               div {
                 font-family: Arial, sans-serif; 
@@ -870,10 +793,10 @@ const sendOtpIfEmailIdNotExists = async (req, res) => {
         <body>
         <div>
           <h2>Hello,</h2>
-          <p>Thank you for registering at Tecstaq-hrms.com. Use the OTP below to complete your registration.</p>
+          <p>Thank you for registering at Tecstaq-helpdesk.com. Use the OTP below to complete your registration.</p>
           <h3>Your OTP: <strong>${otp}</strong></h3>
           <p>This OTP will expire in 5 minutes. Please don’t share this code with anyone.</p>
-          <p>Best regards,<br>The Tecstaq-hrms Team</p>
+          <p>Best regards,<br>The Tecstaq-helpdesk Team</p>
         </div>
         </body>
         </html>`;
@@ -883,16 +806,15 @@ const sendOtpIfEmailIdNotExists = async (req, res) => {
             from: "support@tecstaq.com",
             to: email_id,
             // replyTo: "rohitlandage86@gmail.com",
-            bcc: "ushamyadav777@gmail.com",
-            subject: "Your Task Registration OTP",
+            // bcc: "sushantsjamdade@gmail.com",
+            //bcc: "ushamyadav777@gmail.com"
+            subject: "Your Registration OTP",
             html: message,
         };
 
-        try {
-            await transporter.sendMail(mailOptions);
-        } catch (mailError) {
-            // console.error("Error while sending mail:", mailError);
-        }
+        // Send the email
+        await transporter.sendMail(mailOptions);
+
         // Return success response
         return res.status(200).json({
             status: 200,
@@ -904,38 +826,260 @@ const sendOtpIfEmailIdNotExists = async (req, res) => {
         if (connection) connection.release();
     }
 };
-// get state list 
-const getStateList = async (req, res) => {
-    let connection = await pool.getConnection();
+
+//get Technician ...
+const deleteTechnician = async (req, res) => {
+    const agentId = parseInt(req.params.id);
+
+    // attempt to obtain a database connection
+    let connection = await getConnection();
+
     try {
-        //get state query
-        let getStateQuery = "SELECT * FROM state WHERE status = 1"
-        let stateResult = await connection.query(getStateQuery);
+
+        //start a transaction
+        await connection.beginTransaction();
+
+        let deleteTechnicianQuery = `DELETE FROM customer_agents WHERE agents_id = ?`;
+        const deleteTechnicianResult = await connection.query(deleteTechnicianQuery, [agentId]);
+
+        // Commit the transaction
+        await connection.commit();
 
         return res.status(200).json({
             status: 200,
-            message: "State retrived successfully.",
-            data: stateResult[0]
-        })
-
+            message: "Technician Delete successfully."
+        });
     } catch (error) {
         return error500(error, res);
     } finally {
         if (connection) connection.release()
     }
-}
+};
+
+//User download
+const getUserDownload = async (req, res) => {
+
+    const { key } = req.query;
+
+    let connection = await getConnection();
+    try {
+        await connection.beginTransaction();
+
+        let getUserQuery = `SELECT u.*, d.department_name, r.role_name 
+        FROM users u 
+        LEFT JOIN departments d
+        ON d.department_id = u.department_id
+        LEFT JOIN roles r
+        ON r.role_id = u.role_id
+        WHERE 1 AND u.status = 1`;
+
+        if (key) {
+            const lowercaseKey = key.toLowerCase().trim();
+            getUserQuery += ` AND (LOWER(name) LIKE '%${lowercaseKey}%')`;
+        }
+
+        getUserQuery += " ORDER BY u.created_at DESC";
+
+        let result = await connection.query(getUserQuery);
+        let user = result[0];
+
+        if (user.length === 0) {
+            return error422("No data found.", res);
+        }
+
+
+        user = user.map((item, index) => ({
+            "Sr No": index + 1,
+            "Create Date": item.cts,
+            "User Name":item.user_name,
+            "Email ID": item.email_id,
+            "Phone No.": item.phone_number,
+            "Role Name": item.role_name,
+            "Department Name":item.department_name
+
+            // "Status": item.status === 1 ? "activated" : "deactivated",
+        }));
+
+        // Create a new workbook
+        const workbook = xlsx.utils.book_new();
+
+        // Create a worksheet and add only required columns
+        const worksheet = xlsx.utils.json_to_sheet(user);
+
+        // Add the worksheet to the workbook
+        xlsx.utils.book_append_sheet(workbook, worksheet, "UserInfo");
+
+        // Create a unique file name
+        const excelFileName = `exported_data_${Date.now()}.xlsx`;
+
+        // Write the workbook to a file
+        xlsx.writeFile(workbook, excelFileName);
+
+        // Send the file to the client
+        res.download(excelFileName, (err) => {
+            if (err) {
+                res.status(500).send("Error downloading the file.");
+            } else {
+                fs.unlinkSync(excelFileName);
+            }
+        });
+
+        await connection.commit();
+    } catch (error) {
+        return error500(error, res);
+    } finally {
+        if (connection) connection.release();
+    }
+};
+
+const getDBlocal = async (req, res) => {
+  let connection;
+
+  try {
+    // 1️⃣ Create DB connection
+    connection = await getConnection();
+    await connection.beginTransaction();
+
+    // 2️⃣ Database credentials
+    const DB_NAME = 'tecstaq_helpdesk';
+    const DB_USER = 'root';
+    const DB_PASS = ''; // your MySQL password
+    const DB_HOST = 'localhost';
+
+    // 3️⃣ Absolute path to the SQL file
+    const sqlFilePath = path.join(__dirname, '../../db.js'); // ✅ this is your SQL dump file
+
+    if (!fs.existsSync(sqlFilePath)) {
+      throw new Error(`SQL file not found at path: ${sqlFilePath}`);
+    }
+
+    console.log('📄 Importing from:', sqlFilePath);
+
+    // 4️⃣ Import SQL file
+    const importer = new Importer({
+      host: 'localhost',
+      user: 'root',
+      password: '', // your MySQL password if any
+      database: 'tecstaq_helpdesk',
+    });
+
+    await importer.import(sqlFilePath);
+
+    // 5️⃣ Create backup after import
+    const backupFolder = path.join(__dirname, '../db');
+    
+    if (!fs.existsSync(backupFolder)) fs.mkdirSync(backupFolder, { recursive: true });
+
+    const backupFilePath = path.join(
+      backupFolder,
+      `${DB_NAME}_backup_${new Date().toISOString().slice(0, 10)}.sql`
+    );
+
+    const mysqldumpPath = `"C:\\xampp\\mysql\\bin\\mysqldump.exe"`; // adjust if needed
+    const dumpCommand = `${mysqldumpPath} -u ${DB_USER} ${
+      DB_PASS ? `-p${DB_PASS}` : ''
+    } ${DB_NAME} > "${backupFilePath}"`;
+
+    await new Promise((resolve, reject) => {
+      exec(dumpCommand, (error, stdout, stderr) => {
+        if (error) return reject(stderr || error.message);
+        resolve(stdout);
+      });
+    });
+
+
+    // 6️⃣ Commit and respond
+    await connection.commit();
+    res.send(`✅ Database imported successfully and backup created at: ${backupFilePath}`);
+  } catch (error) {
+    console.error('❌ Database import/backup failed:', error);
+    if (connection) await connection.rollback();
+    res.status(500).send(error.message);
+  } finally {
+    if (connection) connection.release();
+  }
+};
+
+const getDB = async (req, res) => {
+  let connection;
+
+  try {
+    // 1?? Create DB connection
+    connection = await getConnection();
+    await connection.beginTransaction();
+
+    // 2?? Database credentials
+    const DB_NAME = 'tecstaq_helpdesk';
+    const DB_USER = 'root';
+    const DB_PASS = 'Changeme@2025#';
+    const DB_HOST = 'localhost';
+
+    // 3?? Absolute path to the SQL file
+    const sqlFilePath = path.join(__dirname, '../../db.js'); 
+
+    if (!fs.existsSync(sqlFilePath)) {
+      throw new Error(`SQL file not found at path: ${sqlFilePath}`);
+    }
+
+    console.log('?? Importing from:', sqlFilePath);
+
+    // 4?? Import SQL file
+    const importer = new Importer({
+      host: DB_HOST,
+      user: DB_USER,
+      password: DB_PASS,
+      database: DB_NAME
+    });
+
+    await importer.import(sqlFilePath);
+
+    // 5?? Create backup after import
+    const backupFolder = path.join(__dirname, '../backup/database');
+    if (!fs.existsSync(backupFolder)) fs.mkdirSync(backupFolder, { recursive: true });
+
+    const backupFilePath = path.join(
+      backupFolder,
+      `${DB_NAME}_backup_${new Date().toISOString().slice(0, 10)}.sql`
+    );
+
+    // ? For Linux use mysqldump directly
+    const mysqldumpPath = `mysqldump`;
+    const dumpCommand = `${mysqldumpPath} -h ${DB_HOST} -u ${DB_USER} ${DB_PASS ? `-p${DB_PASS}` : ''} ${DB_NAME} > "${backupFilePath}"`;
+
+    await new Promise((resolve, reject) => {
+      exec(dumpCommand, (error, stdout, stderr) => {
+        if (error) return reject(stderr || error.message);
+        resolve(stdout);
+      });
+    });
+
+    // 6?? Commit and respond
+    await connection.commit();
+    res.send(`? Database imported successfully and backup created at: ${backupFilePath}`);
+  } catch (error) {
+    console.error('? Database import/backup failed:', error);
+    if (connection) await connection.rollback();
+    res.status(500).send(error.message);
+  } finally {
+    if (connection) connection.release();
+  }
+};
 
 module.exports = {
-    createUser,
-    getUsers,
-    getUser,
-    updateUser,
-    getUserDownload,
-    onChangePassword,
-    sendOtp,
-    verifyOtp,
-    checkEmailId,
-    forgotPassword,
-    sendOtpIfEmailIdNotExists,
-    getStateList
-}
+  createUser,
+  login,
+  getUsers,
+  getUserWma,
+  getUser,
+  updateUser,
+  onStatusChange,
+  onChangePassword,
+  sendOtp,
+  verifyOtp,
+  checkEmailId,
+  forgotPassword,
+  sendOtpIfEmailIdNotExists,
+  deleteTechnician,
+  getUserDownload,
+  getDB
+};

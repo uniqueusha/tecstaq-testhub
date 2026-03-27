@@ -11,8 +11,9 @@ app.use("/images", express.static(path.join(__dirname, "images")));
 app.use(express.static('public')); // Assuming 'public' is the directory containing 'images'
 
 app.use(cors())
-//const userRoute = require('./src/routes/user.route');
+const userRoute = require('./src/routes/user.route');
 const studentRoute = require('./src/routes/student-registration.route');
+const groupRoute = require('./src/routes/group.route');
 
 app.use(bodyParser.json());
 
@@ -95,8 +96,9 @@ app.get('/health', async (req, res) => {
 //app.use(require('./src/middleware/xss-protect'));
 
 
-//app.use('/api/user', userRoute);
+app.use('/api/user', userRoute);
 app.use('/api/student', studentRoute);
+app.use('/api/group', groupRoute);
 
 
 module.exports = app;
