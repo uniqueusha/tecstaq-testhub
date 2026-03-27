@@ -40,7 +40,7 @@ error404 = (message, res) => {
 const createTest = async (req, res)=>{
     const group_id = req.body.group_id ? req.body.group_id:'';
     const test_name = req.body.test_name ? req.body.test_name.trim():'';
-    const duration = req.body.duration ? req.body.duration.trim():'';
+    const duration = req.body.duration ? req.body.duration:'';
     const total_marks = req.body.total_marks ? req.body.total_marks.trim():'';
     const start_time = req.body.start_time ? req.body.start_time.trim():'';
     const end_time = req.body.end_time ? req.body.end_time.trim():'';
@@ -84,7 +84,7 @@ const updateTest = async (req, res) => {
     const testId = parseInt(req.params.id);
     const group_id = req.body.group_id ? req.body.group_id:'';
     const test_name = req.body.test_name ? req.body.test_name.trim():'';
-    const duration = req.body.duration ? req.body.duration.trim():'';
+    const duration = req.body.duration ? req.body.duration:'';
     const total_marks = req.body.total_marks ? req.body.total_marks.trim():'';
     const start_time = req.body.start_time ? req.body.start_time.trim():'';
     const end_time = req.body.end_time ? req.body.end_time.trim():'';
@@ -136,7 +136,6 @@ const updateTest = async (req, res) => {
 const onStatusChange = async (req, res) => {
     const testId = parseInt(req.params.id);
     const status = parseInt(req.query.status); // Validate and parse the status parameter
-
 
     // attempt to obtain a database connection
     let connection = await getConnection();
@@ -317,8 +316,6 @@ const getTestWma = async (req, res) => {
             data: test,
         });
     } catch (error) {
-        console.log(error);
-        
         return error500(error, res);
     } finally {
         if (connection) connection.release()
