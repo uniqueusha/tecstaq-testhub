@@ -302,7 +302,7 @@ const getTestWma = async (req, res) => {
         let testQuery = `SELECT * FROM tests 
         WHERE status = 1 `;
 
-        testQuery += ` ORDER BY test_name`;
+        testQuery += ` ORDER BY test_name ASC`;
 
         const testResult = await connection.query(testQuery);
         const test = testResult[0];

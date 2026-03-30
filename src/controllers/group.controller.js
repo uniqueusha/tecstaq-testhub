@@ -289,7 +289,7 @@ const getGroupWma = async (req, res) => {
         let groupQuery = `SELECT * FROM groups 
         WHERE status = 1 `;
 
-        groupQuery += ` ORDER BY group_name`;
+        groupQuery += ` ORDER BY group_name ASC`;
 
         const groupResult = await connection.query(groupQuery);
         const group = groupResult[0];

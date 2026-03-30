@@ -289,7 +289,7 @@ const getQuetionTypeWma = async (req, res) => {
         let quetionTypeQuery = `SELECT * FROM quetion_type 
         WHERE status = 1 `;
 
-        quetionTypeQuery += ` ORDER BY quetion_type`;
+        quetionTypeQuery += ` ORDER BY quetion_type ASC`;
 
         const quetionTypeResult = await connection.query(quetionTypeQuery);
         const quetionType = quetionTypeResult[0];

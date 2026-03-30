@@ -129,7 +129,7 @@ const updateQuestionnaire = async (req, res) => {
             SET test_id = ?, quetion = ?, quetion_type_id = ?, answer = ?
             WHERE questionnaire_header_id = ?
         `;
-        await connection.query(updateQuery, [ test_id, quetion, quetion_type_id, answer, questionnaireHeaderId]);
+        await connection.query(updateQuery, [ test_id, quetion, quetion_type_id, answer, questionnaireId]);
 
         //insert into questionnaire Footer in Array
         let questionnaireFooterArray = questionnaireFooter
@@ -157,7 +157,7 @@ const updateQuestionnaire = async (req, res) => {
             message: "Questionnaire updated successfully.",
         });
     } catch (error) {
-        return error500(error, res);
+       return error500(error, res);
     } finally {
         if (connection) connection.release()
     }
@@ -228,24 +228,30 @@ const getAllQuestionnaire = async (req, res) => {
         //start a transaction
         await connection.beginTransaction();
 
-        let getQuestionnaireQuery = `SELECT * FROM questionnaire_header`;
+        let getQuestionnaireQuery = `SELECT qh.*, qt.quetion_type, t.test_name FROM questionnaire_header qh
+        LEFT JOIN tests t ON t.test_id = qh.test_id
+        LEFT JOIN quetion_type qt ON qt.quetion_type_id = qh.quetion_type_id
+        WHERE 1`;
 
-        let countQuery = `SELECT COUNT(*) AS total FROM questionnaire_header `;
+        let countQuery = `SELECT COUNT(*) AS total FROM questionnaire_header qh
+        LEFT JOIN tests t ON t.test_id = qh.test_id
+        LEFT JOIN quetion_type qt ON qt.quetion_type_id = qh.quetion_type_id
+        WHERE 1`;
 
         if (key) {
             const lowercaseKey = key.toLowerCase().trim();
             if (lowercaseKey === "activated") {
-                getQuestionnaireQuery += ` AND status = 1`;
-                countQuery += ` AND status = 1`;
+                getQuestionnaireQuery += ` AND qh.status = 1`;
+                countQuery += ` AND qh.status = 1`;
             } else if (lowercaseKey === "deactivated") {
-                getQuestionnaireQuery += ` AND status = 0`;
-                countQuery += ` AND status = 0`;
+                getQuestionnaireQuery += ` AND qh.status = 0`;
+                countQuery += ` AND qh.status = 0`;
             } else {
-                getQuestionnaireQuery += ` AND LOWER(quetion_type) LIKE '%${lowercaseKey}%' `;
-                countQuery += ` AND LOWER(quetion_type) LIKE '%${lowercaseKey}%' `;
+                getQuestionnaireQuery += ` AND LOWER(qt.quetion_type) LIKE '%${lowercaseKey}%' `;
+                countQuery += ` AND LOWER(qt.quetion_type) LIKE '%${lowercaseKey}%' `;
             }
         }
-        getQuestionnaireQuery += " ORDER BY cts DESC";
+        getQuestionnaireQuery += " ORDER BY qh.cts DESC";
 
         // Apply pagination if both page and perPage are provided
         let total = 0;
@@ -260,6 +266,18 @@ const getAllQuestionnaire = async (req, res) => {
         const result = await connection.query(getQuestionnaireQuery);
         const questionnaire = result[0];
 
+        // Fetch Questionnaire footer
+        for (let i = 0; i < questionnaire.length; i++) {
+            const element = questionnaire[i];
+            let getQuestionnaireFooterQuery = `SELECT * FROM questionnaire_footer
+            WHERE questionnaire_header_id = ${element.questionnaire_header_id} AND status = 1`;
+
+            getQuestionnaireFooterQuery += ` ORDER BY cts DESC`;
+
+            const questionnaireFooterResult = await connection.query(getQuestionnaireFooterQuery);
+            questionnaire[i]['questionnaireFooter'] = questionnaireFooterResult[0];
+        }
+        
         // Commit the transaction
         await connection.commit();
         const data = {
@@ -297,18 +315,26 @@ const getQuestionnaire = async (req, res) => {
         //start a transaction
         await connection.beginTransaction();
 
-        const quetionTypeQuery = `SELECT * FROM quetion_type
-        WHERE quetion_type_id = ?`;
-        const quetionTypeResult = await connection.query(quetionTypeQuery, [quetionTypeId]);
-        if (quetionTypeResult[0].length == 0) {
-            return error422("Quetion Type Not Found.", res);
+        const questionnaireQuery = `SELECT qh.*, qt.quetion_type, t.test_name FROM questionnaire_header qh
+        LEFT JOIN tests t ON t.test_id = qh.test_id
+        LEFT JOIN quetion_type qt ON qt.quetion_type_id = qh.quetion_type_id
+        WHERE questionnaire_header_id = ?`;
+        const questionnaireResult = await connection.query(questionnaireQuery, [questionnaireId]);
+        if (questionnaireResult[0].length == 0) {
+            return error422("Questionnaire Not Found.", res);
         }
-        const quetionType = quetionTypeResult[0][0];
+        const questionnaire = questionnaireResult[0][0];
+
+        //get footer
+        let footerQuery = `SELECT * FROM questionnaire_footer
+            WHERE questionnaire_header_id = ? AND status = 1`;
+        let footerResult = await connection.query(footerQuery, [questionnaireId]);
+        questionnaire['questionnaireFooter'] = footerResult[0];
 
         return res.status(200).json({
             status: 200,
-            message: "Quetion type Retrived Successfully",
-            data: quetionType
+            message: "Questionnaire Retrived Successfully",
+            data: questionnaire
         });
     } catch (error) {
         return error500(error, res);
@@ -331,7 +357,7 @@ const getQuestionnaireWma = async (req, res) => {
         let questionnaireQuery = `SELECT * FROM questionnaire_header 
         WHERE status = 1 `;
 
-        questionnaireQuery += ` ORDER BY questionnaire_header`;
+        questionnaireQuery += ` ORDER BY quetion ASC`;
 
         const questionnaireResult = await connection.query(questionnaireQuery);
         const questionnaire = questionnaireResult[0];

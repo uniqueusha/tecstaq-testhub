@@ -326,7 +326,7 @@ const getStudentsWma = async (req, res) => {
         LEFT JOIN groups g ON g.group_id = sr.group_id
         WHERE sr.status = 1 `;
 
-        studentQuery += ` ORDER BY sr.student_name`;
+        studentQuery += ` ORDER BY sr.student_name ASC`;
 
         const studentResult = await connection.query(studentQuery);
         const student = studentResult[0];

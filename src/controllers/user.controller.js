@@ -414,7 +414,7 @@ const getUserWma = async (req, res) => {
         await connection.beginTransaction();
 
         let userQuery = `SELECT u.* FROM users u WHERE 1 AND u.status = 1`;
-        userQuery += ` ORDER BY u.user_name`;
+        userQuery += ` ORDER BY u.user_name ASC`;
 
         const userResult = await connection.query(userQuery);
         const user = userResult[0];
