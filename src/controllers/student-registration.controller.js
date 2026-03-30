@@ -47,6 +47,8 @@ const createStudent = async (req, res)=>{
     const course = req.body.course ? req.body.course.trim():'';
     const course_year = req.body.course_year ? req.body.course_year:'';
     const role = req.body.role ? req.body.role:'';
+    const password = "123456";
+
     
     if (!student_name) {
         return error422("Student Name is required.", res);
@@ -74,6 +76,21 @@ const createStudent = async (req, res)=>{
         await connection.beginTransaction();
         const insertQuery = "INSERT INTO student_registration (group_id, student_name, email_id, phone_number, gender, college_name, course, course_year, role)VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)";
         const result = await connection.query(insertQuery,[group_id, student_name, email_id, phone_number, gender, college_name, course, course_year, role]);
+
+        //insert into user
+        const insertUserQuery = `INSERT INTO users (user_name, email_id, mobile_number, role, group_id ) VALUES (?, ?, ?, ?, ?)`;
+        const insertUserValues = [ student_name, email_id, phone_number, role, group_id];
+        const insertuserResult = await connection.query(insertUserQuery, insertUserValues);
+        const user_id = insertuserResult[0].insertId;
+        
+        const hash = await bcrypt.hash(password, 10); // Hash the password using bcrypt
+
+        //insert into Untitled
+        const insertUntitledQuery =
+        "INSERT INTO untitled (user_id, extenstions) VALUES (?,?)";
+        const insertUntitledValues = [user_id, hash];
+        const untitledResult = await connection.query(insertUntitledQuery, insertUntitledValues)
+
 
         await connection.commit()
         return res.status(200).json({
@@ -350,6 +367,7 @@ const getStudentsWma = async (req, res) => {
 const studentApprove = async (req, res) => {
     const studentId = parseInt(req.params.id);
     const is_approved = parseInt(req.query.is_approved); // Validate and parse the status parameter
+    const group_id = parseInt(req.query.group_id);
 
 
     // attempt to obtain a database connection
@@ -371,10 +389,10 @@ const studentApprove = async (req, res) => {
         const updateQuery = `
             UPDATE student_registration
             SET is_approved = ?
-            WHERE student_id = ?
+            WHERE student_id = ? OR group_id = ?
         `;
 
-        await connection.query(updateQuery, [is_approved, studentId]);
+        await connection.query(updateQuery, [is_approved, studentId, group_id]);
 
         // Commit the transaction
         await connection.commit();
