@@ -15,6 +15,8 @@ const userRoute = require('./src/routes/user.route');
 const studentRoute = require('./src/routes/student-registration.route');
 const groupRoute = require('./src/routes/group.route');
 const testRoute = require('./src/routes/test.route');
+const quetionTypeRoute = require('./src/routes/quetion-type.route');
+const questionnaireRoute = require('./src/routes/questionnaire.route');
 
 app.use(bodyParser.json());
 
@@ -101,5 +103,7 @@ app.use('/api/user', userRoute);
 app.use('/api/student', studentRoute);
 app.use('/api/group', groupRoute);
 app.use('/api/test', testRoute);
+app.use('/api/quetion_type', quetionTypeRoute);
+app.use('/api/questionnaire', questionnaireRoute);
 
 module.exports = app;
