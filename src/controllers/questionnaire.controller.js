@@ -265,30 +265,28 @@ const getAllQuestionnaire = async (req, res) => {
         //start a transaction
         await connection.beginTransaction();
 
-        let getquestionnaireQuery = `SELECT qh.*, qt.question_type, t.test_name FROM questionnaire_header qh
-        LEFT JOIN tests t ON t.test_id = qh.test_id
-        LEFT JOIN question_type qt ON qt.question_type_id = qh.question_type_id
+        let getquestionnaireQuery = `SELECT q.*, t.test_name FROM questionnaire q
+        LEFT JOIN tests t ON t.test_id = q.test_id
         WHERE 1`;
 
-        let countQuery = `SELECT COUNT(*) AS total FROM questionnaire_header qh
-        LEFT JOIN tests t ON t.test_id = qh.test_id
-        LEFT JOIN question_type qt ON qt.question_type_id = qh.question_type_id
+        let countQuery = `SELECT COUNT(*) AS total FROM questionnaire q
+        LEFT JOIN tests t ON t.test_id = q.test_id
         WHERE 1`;
 
         if (key) {
             const lowercaseKey = key.toLowerCase().trim();
             if (lowercaseKey === "activated") {
-                getquestionnaireQuery += ` AND qh.status = 1`;
-                countQuery += ` AND qh.status = 1`;
+                getquestionnaireQuery += ` AND q.status = 1`;
+                countQuery += ` AND q.status = 1`;
             } else if (lowercaseKey === "deactivated") {
-                getquestionnaireQuery += ` AND qh.status = 0`;
-                countQuery += ` AND qh.status = 0`;
+                getquestionnaireQuery += ` AND q.status = 0`;
+                countQuery += ` AND q.status = 0`;
             } else {
-                getquestionnaireQuery += ` AND LOWER(qt.question_type) LIKE '%${lowercaseKey}%' `;
-                countQuery += ` AND LOWER(qt.question_type) LIKE '%${lowercaseKey}%' `;
+                getquestionnaireQuery += ` AND LOWER(t.test_name) LIKE '%${lowercaseKey}%' `;
+                countQuery += ` AND LOWER(t.test_name) LIKE '%${lowercaseKey}%' `;
             }
         }
-        getquestionnaireQuery += " ORDER BY qh.cts DESC";
+        getquestionnaireQuery += " ORDER BY q.cts DESC";
 
         // Apply pagination if both page and perPage are provided
         let total = 0;
@@ -303,18 +301,30 @@ const getAllQuestionnaire = async (req, res) => {
         const result = await connection.query(getquestionnaireQuery);
         const questionnaire = result[0];
 
-        // Fetch questionnaire footer
         for (let i = 0; i < questionnaire.length; i++) {
             const element = questionnaire[i];
+            let getquestionnaireHeaderQuery = `SELECT qh.*, qt.question_type FROM questionnaire_header qh
+            LEFT JOIN question_type qt ON qt.question_type_id = qh.question_type_id
+            WHERE qh.questionnaire_id = ${element.questionnaire_id} AND qh.status = 1`;
+
+            getquestionnaireHeaderQuery += ` ORDER BY qh.cts DESC`;
+
+            const questionnaireHeaderResult = await connection.query(getquestionnaireHeaderQuery);
+            const questionnaireHeader = questionnaireHeaderResult[0];
+        
+        // Fetch questionnaire footer
+        for (let j = 0; j < questionnaireHeader.length; j++) {
+            const element = questionnaireHeader[j];
             let getquestionnaireFooterQuery = `SELECT * FROM questionnaire_footer
             WHERE questionnaire_header_id = ${element.questionnaire_header_id} AND status = 1`;
 
             getquestionnaireFooterQuery += ` ORDER BY cts DESC`;
 
             const questionnaireFooterResult = await connection.query(getquestionnaireFooterQuery);
-            questionnaire[i]['questionnaireFooter'] = questionnaireFooterResult[0];
+            questionnaireHeader[j]['questionnaireFooter'] = questionnaireFooterResult[0];
         }
-        
+        questionnaire[i]['questionnaireHeader'] = questionnaireHeader;
+        }
         // Commit the transaction
         await connection.commit();
         const data = {
