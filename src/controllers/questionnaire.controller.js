@@ -362,21 +362,34 @@ const getQuestionnaire = async (req, res) => {
         //start a transaction
         await connection.beginTransaction();
 
-        const questionnaireQuery = `SELECT qh.*, qt.question_type, t.test_name FROM questionnaire_header qh
-        LEFT JOIN tests t ON t.test_id = qh.test_id
-        LEFT JOIN question_type qt ON qt.question_type_id = qh.question_type_id
-        WHERE questionnaire_header_id = ?`;
-        const questionnaireResult = await connection.query(questionnaireQuery, [questionnaireId]);
+        let getquestionnaireQuery = `SELECT q.*, t.test_name FROM questionnaire q
+        LEFT JOIN tests t ON t.test_id = q.test_id
+        WHERE q.questionnaire_id = ?`;
+        let questionnaireResult = await connection.query(getquestionnaireQuery, [questionnaireId]);
         if (questionnaireResult[0].length == 0) {
             return error422("questionnaire Not Found.", res);
         }
         const questionnaire = questionnaireResult[0][0];
 
-        //get footer
-        let footerQuery = `SELECT * FROM questionnaire_footer
-            WHERE questionnaire_header_id = ? AND status = 1`;
-        let footerResult = await connection.query(footerQuery, [questionnaireId]);
-        questionnaire['questionnaireFooter'] = footerResult[0];
+        //get header
+         let headerQuery = `SELECT qh.*, qt.question_type FROM questionnaire_header qh
+            LEFT JOIN question_type qt ON qt.question_type_id = qh.question_type_id
+            WHERE qh.questionnaire_id = ? AND qh.status = 1`;
+        let headerResult = await connection.query(headerQuery, [questionnaireId]);
+        let headers = headerResult[0];
+
+        //Loop headers and attach footer inside
+        for (let i = 0; i < headers.length; i++) {
+            const header = headers[i];
+            let footerQuery = `SELECT * FROM questionnaire_footer WHERE questionnaire_header_id = ? AND status = 1`;
+            let footerResult = await connection.query(footerQuery, [header.questionnaire_header_id]);
+
+            //Attach footer inside header
+            headers[i]['questionnaireFooter'] = footerResult[0];
+        }
+
+        // ✅ Attach headers to questionnaire
+        questionnaire['questionnaireHeader'] = headers;
 
         return res.status(200).json({
             status: 200,
