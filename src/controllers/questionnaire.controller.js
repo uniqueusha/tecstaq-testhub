@@ -39,10 +39,7 @@ error404 = (message, res) => {
 //create questionnaire
 const createQuestionnaire = async (req, res)=>{
     const test_id = req.body.test_id ? req.body.test_id:'';
-    const quetion = req.body.quetion ? req.body.quetion.trim():'';
-    const quetion_type_id = req.body.quetion_type_id ? req.body.quetion_type_id:'';
-    const answer = req.body.answer ? req.body.answer:'';
-    const questionnaireFooter = req.body.questionnaireFooter ? req.body.questionnaireFooter:[];
+    const questionnaireHeader = req.body.questionnaireHeader ? req.body.questionnaireHeader:[];
 
     if (!test_id) {
         return error422("Test id is required.", res);
@@ -60,9 +57,22 @@ const createQuestionnaire = async (req, res)=>{
     try {
         // start the transaction
         await connection.beginTransaction();
-        const insertQuery = "INSERT INTO questionnaire_header ( test_id, quetion, quetion_type_id, answer) VALUES (?, ?, ?, ?)";
-        const result = await connection.query(insertQuery,[ test_id, quetion, quetion_type_id, answer]);
-        const questionnaire_header_id = result[0].insertId;
+
+        const questionQuery = "INSERT INTO questionnaire ( test_id ) VALUES (?)";
+        const questionResult = await connection.query(questionQuery,[ test_id ]);
+        const questionnaire_id = questionResult[0].insertId;
+
+        let questionnaireHeaderArray = questionnaireHeader
+        for (let i = 0; i < questionnaireHeaderArray.length; i++) {
+            const element = questionnaireHeaderArray[i];
+            const question = element.question ? element.question : '';
+            const question_type_id = element.question_type_id ? element.question_type_id : '';
+            const answer = element.answer ? element.answer:'';
+            const questionnaireFooter = element.questionnaireFooter ? element.questionnaireFooter:[];
+
+            const insertQuery = "INSERT INTO questionnaire_header (questionnaire_id, question, question_type_id, answer) VALUES (?, ?, ?, ?)";
+            const result = await connection.query(insertQuery,[ questionnaire_id, question, question_type_id, answer]);
+            const questionnaire_header_id = result[0].insertId;
 
         //insert into questionnaire Footer in Array
         let questionnaireFooterArray = questionnaireFooter
@@ -70,17 +80,19 @@ const createQuestionnaire = async (req, res)=>{
             const elements = questionnaireFooterArray[i];
             const option = elements.option ? elements.option : '';
         
-            let insertQuestionnaireFooterQuery = 'INSERT INTO questionnaire_footer (questionnaire_header_id, option) VALUES (?, ?)';
-            let insertQuestionnaireFooterValues = [ questionnaire_header_id, option ];
+            let insertQuestionnaireFooterQuery = 'INSERT INTO questionnaire_footer ( questionnaire_id, questionnaire_header_id, option) VALUES (?, ?, ?)';
+            let insertQuestionnaireFooterValues = [ questionnaire_id, questionnaire_header_id, option ];
             let insertQuestionnaireFooterResult = await connection.query(insertQuestionnaireFooterQuery, insertQuestionnaireFooterValues);
         }
-
+       }
         await connection.commit()
         return res.status(200).json({
             status:200,
             message:"Questionnaire created successfully."
         })
     } catch (error) {
+        console.log(error);
+        
         if (connection) connection.rollback();
         return error500(error, res);
     } finally{

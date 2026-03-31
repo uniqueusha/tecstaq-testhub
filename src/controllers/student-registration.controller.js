@@ -49,7 +49,6 @@ const createStudent = async (req, res)=>{
     const role = req.body.role ? req.body.role:'';
     const password = "123456";
 
-    
     if (!student_name) {
         return error422("Student Name is required.", res);
     } else if (!email_id) {
@@ -90,7 +89,6 @@ const createStudent = async (req, res)=>{
         "INSERT INTO untitled (user_id, extenstions) VALUES (?,?)";
         const insertUntitledValues = [user_id, hash];
         const untitledResult = await connection.query(insertUntitledQuery, insertUntitledValues)
-
 
         await connection.commit()
         return res.status(200).json({
@@ -369,7 +367,6 @@ const studentApprove = async (req, res) => {
     const is_approved = parseInt(req.query.is_approved); // Validate and parse the status parameter
     const group_id = parseInt(req.query.group_id);
 
-
     // attempt to obtain a database connection
     let connection = await getConnection();
 
@@ -389,8 +386,7 @@ const studentApprove = async (req, res) => {
         const updateQuery = `
             UPDATE student_registration
             SET is_approved = ?
-            WHERE student_id = ? OR group_id = ?
-        `;
+            WHERE student_id = ? OR group_id = ?`;
 
         await connection.query(updateQuery, [is_approved, studentId, group_id]);
 
@@ -414,6 +410,5 @@ module.exports = {
     updateStudent,
     onStatusChange,
     getStudent,
-    studentApprove
-    
+    studentApprove   
 }

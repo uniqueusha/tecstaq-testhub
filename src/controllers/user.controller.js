@@ -349,7 +349,7 @@ const updateUser = async (req, res) => {
 const onStatusChange = async (req, res) => {
     const userId = parseInt(req.params.id);
     const status = parseInt(req.query.status); // Validate and parse the status parameter
-
+    const group_id = parseInt(req.query.group_id);
 
     // attempt to obtain a database connection
     let connection = await getConnection();
@@ -382,10 +382,10 @@ const onStatusChange = async (req, res) => {
         const updateQuery = `
             UPDATE users
             SET status = ?
-            WHERE user_id = ?
+            WHERE user_id = ? OR group_id = ?
         `;
 
-        await connection.query(updateQuery, [status, userId]);
+        await connection.query(updateQuery, [status, userId, group_id]);
 
         const statusMessage = status === 1 ? "activated" : "deactivated";
         // Commit the transaction
