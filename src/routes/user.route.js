@@ -13,8 +13,6 @@ router.get('/', userController.getUsers);
 router.get('/wma', userController.getUserWma);
 //download user
 router.get('/download', userController.getUserDownload);
-//db download
-router.get('/db-download', userController.getDB);
 //by id 
 router.get('/:id', userController.getUser);
 //change password

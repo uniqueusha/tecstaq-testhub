@@ -1,18 +1,18 @@
 
 const express = require('express');
 const router = express.Router();
-const quetionTypeController = require('../controllers/quetion-type.controller');
+const questionTypeController = require('../controllers/quetion-type.controller');
 const checkAuth = require('../middleware/check.auth')
 
-router.post('/', quetionTypeController.createQuetionType);
+router.post('/', questionTypeController.createQuestionType);
 //all list
-router.get('/', quetionTypeController.getAllQuetionType);
+router.get('/', questionTypeController.getAllQuestionType);
 //active list  
-router.get('/wma', quetionTypeController.getQuetionTypeWma);
+router.get('/wma', questionTypeController.getQuestionTypeWma);
 //get list by id
-router.get('/:id', quetionTypeController.getQuetionType);
+router.get('/:id', questionTypeController.getQuestionType);
 // update priority
-router.put('/:id', quetionTypeController.updateQuetionType);
+router.put('/:id', questionTypeController.updateQuestionType);
 //update status
-router.patch('/:id', quetionTypeController.onStatusChange);
+router.patch('/:id', questionTypeController.onStatusChange);
 module.exports = router;

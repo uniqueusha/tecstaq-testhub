@@ -36,21 +36,21 @@ error404 = (message, res) => {
   });
 };
 
-//create Quetion Type
-const createQuetionType = async (req, res)=>{
-    const quetion_type = req.body.quetion_type ? req.body.quetion_type.trim():'';
+//create question Type
+const createQuestionType = async (req, res)=>{
+    const question_type = req.body.question_type ? req.body.question_type.trim():'';
     const description = req.body.description ? req.body.description.trim():'';
     
 
-    if (!quetion_type) {
-        return error422("Quetion Type is required.", res);
+    if (!question_type) {
+        return error422("question Type is required.", res);
     } 
 
-    // Check if quetion type already
-    const isQuetionTypeExist = "SELECT * FROM quetion_type WHERE quetion_type  = ?";
-    const isQuetionTypeResult = await pool.query(isQuetionTypeExist,[quetion_type]);
-    if (isQuetionTypeResult[0].length > 0) {
-        return error422("Quetion type is already exists.", res);
+    // Check if question type already
+    const isquestionTypeExist = "SELECT * FROM question_type WHERE question_type  = ?";
+    const isquestionTypeResult = await pool.query(isquestionTypeExist,[question_type]);
+    if (isquestionTypeResult[0].length > 0) {
+        return error422("question type is already exists.", res);
     }
 
     let connection = await getConnection();
@@ -58,13 +58,13 @@ const createQuetionType = async (req, res)=>{
     try {
         // start the transaction
         await connection.beginTransaction();
-        const insertQuery = "INSERT INTO quetion_type ( quetion_type, description) VALUES (?, ?)";
-        const result = await connection.query(insertQuery,[ quetion_type, description]);
+        const insertQuery = "INSERT INTO question_type ( question_type, description) VALUES (?, ?)";
+        const result = await connection.query(insertQuery,[ question_type, description]);
 
         await connection.commit()
         return res.status(200).json({
             status:200,
-            message:"Quetion type created successfully."
+            message:"question type created successfully."
         })
     } catch (error) {
         if (connection) connection.rollback();
@@ -74,14 +74,14 @@ const createQuetionType = async (req, res)=>{
     }
 }
 
-//Update quetion_type
-const updateQuetionType = async (req, res) => {
-    const quetionTypeId = parseInt(req.params.id);
-    const quetion_type = req.body.quetion_type ? req.body.quetion_type :'';
+//Update question_type
+const updateQuestionType = async (req, res) => {
+    const questionTypeId = parseInt(req.params.id);
+    const question_type = req.body.question_type ? req.body.question_type :'';
     const description = req.body.description ? req.body.description.trim():'';
     
-    if (!quetion_type) {
-        return error422("Quetion type is required.", res);
+    if (!question_type) {
+        return error422("question type is required.", res);
     } 
 
     // attempt to obtain a database connection
@@ -92,27 +92,27 @@ const updateQuetionType = async (req, res) => {
         //start a transaction
         await connection.beginTransaction();
 
-        // Check if quetion_type exists
-        const isQuetionTypeExist = "SELECT * FROM quetion_type WHERE quetion_type_id  = ?";
-        const isQuetionTypeResult = await pool.query(isQuetionTypeExist,[quetionTypeId]);
-        if (isQuetionTypeResult[0].length == 0) {
-            return error422("Quetion Type not found.", res);
+        // Check if question_type exists
+        const isquestionTypeExist = "SELECT * FROM question_type WHERE question_type_id  = ?";
+        const isquestionTypeResult = await pool.query(isquestionTypeExist,[questionTypeId]);
+        if (isquestionTypeResult[0].length == 0) {
+            return error422("question Type not found.", res);
         }
 
-        // Update the QuetionType record with new data
+        // Update the questionType record with new data
         const updateQuery = `
-            UPDATE quetion_type
-            SET quetion_type = ?, description = ?
-            WHERE quetion_type_id = ?
+            UPDATE question_type
+            SET question_type = ?, description = ?
+            WHERE question_type_id = ?
         `;
 
-        await connection.query(updateQuery, [ quetion_type, description, quetionTypeId]);
+        await connection.query(updateQuery, [ question_type, description, questionTypeId]);
         // Commit the transaction
         await connection.commit();
 
         return res.status(200).json({
             status: 200,
-            message: "Quetion type updated successfully.",
+            message: "question type updated successfully.",
         });
     } catch (error) {
         return error500(error, res);
@@ -121,9 +121,9 @@ const updateQuetionType = async (req, res) => {
     }
 }
 
-//status change of Quetion Type...
+//status change of question Type...
 const onStatusChange = async (req, res) => {
-    const quetionTypeId = parseInt(req.params.id);
+    const questionTypeId = parseInt(req.params.id);
     const status = parseInt(req.query.status); // Validate and parse the status parameter
 
 
@@ -135,11 +135,11 @@ const onStatusChange = async (req, res) => {
         //start a transaction
         await connection.beginTransaction();
 
-        // Check if quetion_type exists
-        const isQuetionTypeExist = "SELECT * FROM quetion_type WHERE quetion_type_id  = ?";
-        const isQuetionTypeResult = await pool.query(isQuetionTypeExist,[quetionTypeId]);
-        if (isQuetionTypeResult[0].length == 0) {
-            return error422("Quetion Type not found.", res);
+        // Check if question_type exists
+        const isquestionTypeExist = "SELECT * FROM question_type WHERE question_type_id  = ?";
+        const isquestionTypeResult = await pool.query(isquestionTypeExist,[questionTypeId]);
+        if (isquestionTypeResult[0].length == 0) {
+            return error422("question Type not found.", res);
         }
 
         // Validate the status parameter
@@ -150,21 +150,21 @@ const onStatusChange = async (req, res) => {
             });
         }
 
-        // Soft update the Quetion Type status
+        // Soft update the question Type status
         const updateQuery = `
-            UPDATE quetion_type
+            UPDATE question_type
             SET status = ?
-            WHERE quetion_type_id = ?
+            WHERE question_type_id = ?
         `;
 
-        await connection.query(updateQuery, [status, quetionTypeId]);
+        await connection.query(updateQuery, [status, questionTypeId]);
 
         const statusMessage = status === 1 ? "activated" : "deactivated";
         // Commit the transaction
         await connection.commit();
         return res.status(200).json({
             status: 200,
-            message: `Quetion type ${statusMessage} successfully.`,
+            message: `question type ${statusMessage} successfully.`,
         });
     } catch (error) {
         console.log(error);
@@ -174,8 +174,8 @@ const onStatusChange = async (req, res) => {
     }
 };
 
-//all quetion_type list
-const getAllQuetionType = async (req, res) => {
+//all question_type list
+const getAllQuestionType = async (req, res) => {
     const { page, perPage, key } = req.query;
 
     // attempt to obtain a database connection
@@ -186,24 +186,24 @@ const getAllQuetionType = async (req, res) => {
         //start a transaction
         await connection.beginTransaction();
 
-        let getQuetionTypeQuery = `SELECT * FROM quetion_type`;
+        let getquestionTypeQuery = `SELECT * FROM question_type`;
 
-        let countQuery = `SELECT COUNT(*) AS total FROM quetion_type `;
+        let countQuery = `SELECT COUNT(*) AS total FROM question_type `;
 
         if (key) {
             const lowercaseKey = key.toLowerCase().trim();
             if (lowercaseKey === "activated") {
-                getQuetionTypeQuery += ` AND status = 1`;
+                getquestionTypeQuery += ` AND status = 1`;
                 countQuery += ` AND status = 1`;
             } else if (lowercaseKey === "deactivated") {
-                getQuetionTypeQuery += ` AND status = 0`;
+                getquestionTypeQuery += ` AND status = 0`;
                 countQuery += ` AND status = 0`;
             } else {
-                getQuetionTypeQuery += ` AND LOWER(quetion_type) LIKE '%${lowercaseKey}%' `;
-                countQuery += ` AND LOWER(quetion_type) LIKE '%${lowercaseKey}%' `;
+                getquestionTypeQuery += ` AND LOWER(question_type) LIKE '%${lowercaseKey}%' `;
+                countQuery += ` AND LOWER(question_type) LIKE '%${lowercaseKey}%' `;
             }
         }
-        getQuetionTypeQuery += " ORDER BY cts DESC";
+        getquestionTypeQuery += " ORDER BY cts DESC";
 
         // Apply pagination if both page and perPage are provided
         let total = 0;
@@ -212,18 +212,18 @@ const getAllQuetionType = async (req, res) => {
             total = parseInt(totalResult[0][0].total);
 
             const start = (page - 1) * perPage;
-            getQuetionTypeQuery += ` LIMIT ${perPage} OFFSET ${start}`;
+            getquestionTypeQuery += ` LIMIT ${perPage} OFFSET ${start}`;
         }
 
-        const result = await connection.query(getQuetionTypeQuery);
-        const quetionType = result[0];
+        const result = await connection.query(getquestionTypeQuery);
+        const questionType = result[0];
 
         // Commit the transaction
         await connection.commit();
         const data = {
             status: 200,
-            message: "Quetion Type retrieved successfully",
-            data: quetionType,
+            message: "question Type retrieved successfully",
+            data: questionType,
         };
         // Add pagination information if provided
         if (page && perPage) {
@@ -243,9 +243,9 @@ const getAllQuetionType = async (req, res) => {
     }
 } 
 
-//Quetion Type list by id
-const getQuetionType = async (req, res) => {
-    const quetionTypeId = parseInt(req.params.id);
+//question Type list by id
+const getQuestionType = async (req, res) => {
+    const questionTypeId = parseInt(req.params.id);
     
     // attempt to obtain a database connection
     let connection = await getConnection();
@@ -255,18 +255,18 @@ const getQuetionType = async (req, res) => {
         //start a transaction
         await connection.beginTransaction();
 
-        const quetionTypeQuery = `SELECT * FROM quetion_type
-        WHERE quetion_type_id = ?`;
-        const quetionTypeResult = await connection.query(quetionTypeQuery, [quetionTypeId]);
-        if (quetionTypeResult[0].length == 0) {
-            return error422("Quetion Type Not Found.", res);
+        const questionTypeQuery = `SELECT * FROM question_type
+        WHERE question_type_id = ?`;
+        const questionTypeResult = await connection.query(questionTypeQuery, [questionTypeId]);
+        if (questionTypeResult[0].length == 0) {
+            return error422("question Type Not Found.", res);
         }
-        const quetionType = quetionTypeResult[0][0];
+        const questionType = questionTypeResult[0][0];
 
         return res.status(200).json({
             status: 200,
-            message: "Quetion type Retrived Successfully",
-            data: quetionType
+            message: "question type Retrived Successfully",
+            data: questionType
         });
     } catch (error) {
         return error500(error, res);
@@ -275,8 +275,8 @@ const getQuetionType = async (req, res) => {
     }
 }
 
-//get quetion Type active...
-const getQuetionTypeWma = async (req, res) => {
+//get question Type active...
+const getQuestionTypeWma = async (req, res) => {
    
     // attempt to obtain a database connection
     let connection = await getConnection();
@@ -286,21 +286,21 @@ const getQuetionTypeWma = async (req, res) => {
         //start a transaction
         await connection.beginTransaction();
 
-        let quetionTypeQuery = `SELECT * FROM quetion_type 
+        let questionTypeQuery = `SELECT * FROM question_type 
         WHERE status = 1 `;
 
-        quetionTypeQuery += ` ORDER BY quetion_type ASC`;
+        questionTypeQuery += ` ORDER BY question_type ASC`;
 
-        const quetionTypeResult = await connection.query(quetionTypeQuery);
-        const quetionType = quetionTypeResult[0];
+        const questionTypeResult = await connection.query(questionTypeQuery);
+        const questionType = questionTypeResult[0];
 
         // Commit the transaction
         await connection.commit();
 
         return res.status(200).json({
             status: 200,
-            message: "Quetion Type retrieved successfully.",
-            data: quetionType,
+            message: "question Type retrieved successfully.",
+            data: questionType,
         });
     } catch (error) {
         return error500(error, res);
@@ -310,11 +310,11 @@ const getQuetionTypeWma = async (req, res) => {
 }
 
 module.exports = {
-    createQuetionType,
-    getAllQuetionType,
-    getQuetionTypeWma,
-    updateQuetionType,
+    createQuestionType,
+    getAllQuestionType,
+    getQuestionTypeWma,
+    updateQuestionType,
     onStatusChange,
-    getQuetionType
+    getQuestionType
     
 }

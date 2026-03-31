@@ -76,19 +76,19 @@ const createQuestionnaire = async (req, res)=>{
 
         //insert into questionnaire Footer in Array
         let questionnaireFooterArray = questionnaireFooter
-        for (let i = 0; i < questionnaireFooterArray.length; i++) {
-            const elements = questionnaireFooterArray[i];
+        for (let j = 0; j < questionnaireFooterArray.length; j++) {
+            const elements = questionnaireFooterArray[j];
             const option = elements.option ? elements.option : '';
         
-            let insertQuestionnaireFooterQuery = 'INSERT INTO questionnaire_footer ( questionnaire_id, questionnaire_header_id, option) VALUES (?, ?, ?)';
-            let insertQuestionnaireFooterValues = [ questionnaire_id, questionnaire_header_id, option ];
-            let insertQuestionnaireFooterResult = await connection.query(insertQuestionnaireFooterQuery, insertQuestionnaireFooterValues);
+            let insertquestionnaireFooterQuery = 'INSERT INTO questionnaire_footer ( questionnaire_id, questionnaire_header_id, option) VALUES (?, ?, ?)';
+            let insertquestionnaireFooterValues = [ questionnaire_id, questionnaire_header_id, option ];
+            let insertquestionnaireFooterResult = await connection.query(insertquestionnaireFooterQuery, insertquestionnaireFooterValues);
         }
        }
         await connection.commit()
         return res.status(200).json({
             status:200,
-            message:"Questionnaire created successfully."
+            message:"questionnaire created successfully."
         })
     } catch (error) {
         console.log(error);
@@ -104,10 +104,7 @@ const createQuestionnaire = async (req, res)=>{
 const updateQuestionnaire = async (req, res) => {
     const questionnaireId = parseInt(req.params.id);
     const test_id = req.body.test_id ? req.body.test_id:'';
-    const quetion = req.body.quetion ? req.body.quetion.trim():'';
-    const quetion_type_id = req.body.quetion_type_id ? req.body.quetion_type_id:'';
-    const answer = req.body.answer ? req.body.answer:'';
-    const questionnaireFooter = req.body.questionnaireFooter ? req.body.questionnaireFooter:[];
+    const questionnaireHeader = req.body.questionnaireHeader ? req.body.questionnaireHeader:[];
 
     if (!test_id) {
         return error422("Test id is required.", res);
@@ -129,35 +126,61 @@ const updateQuestionnaire = async (req, res) => {
         await connection.beginTransaction();
 
         // Check if questionnaire exists
-        const isQuestionnaireExist = "SELECT * FROM questionnaire_header WHERE questionnaire_header_id  = ?";
-        const isQuestionnaireResult = await pool.query(isQuestionnaireExist,[questionnaireId]);
-        if (isQuestionnaireResult[0].length == 0) {
-            return error422("Questionnaire not found.", res);
+        const isquestionnaireExist = "SELECT * FROM questionnaire_header WHERE questionnaire_header_id  = ?";
+        const isquestionnaireResult = await connection.query(isquestionnaireExist,[questionnaireId]);
+        if (isquestionnaireResult[0].length == 0) {
+            return error422("questionnaire not found.", res);
         }
 
-        // Update the Questionnaire record with new data
-        const updateQuery = `
-            UPDATE questionnaire_header
-            SET test_id = ?, quetion = ?, quetion_type_id = ?, answer = ?
-            WHERE questionnaire_header_id = ?
+         // Update the Questionnaire  record with new data
+        const updateQuestionnaireQuery = `
+            UPDATE questionnaire
+            SET test_id = ? 
+            WHERE questionnaire_id = ?
         `;
-        await connection.query(updateQuery, [ test_id, quetion, quetion_type_id, answer, questionnaireId]);
+        await connection.query(updateQuestionnaireQuery, [ test_id, questionnaireId]);
 
-        //insert into questionnaire Footer in Array
-        let questionnaireFooterArray = questionnaireFooter
-        for (let i = 0; i < questionnaireFooterArray.length; i++) {
-            const elements = questionnaireFooterArray[i];
-            const questionnaire_footer_id = elements.questionnaire_footer_id ? elements.questionnaire_footer_id :'';
-            const option = elements.option ? elements.option : '';
-            
-            if (questionnaire_footer_id) {
-            let updateQuery = `UPDATE questionnaire_footer SET option  = ? WHERE questionnaire_footer_id = ? AND questionnaire_header_id = ?`;
-            let updateValues = [ questionnaireId, option, questionnaire_footer_id ];
-            let updateResult = await connection.query(updateQuery, updateValues);
+         
+    
+        // Update the questionnaire header record with new data
+        let questionnaireHeaderArray = questionnaireHeader
+        for (let i = 0; i < questionnaireHeaderArray.length; i++) {
+            const element = questionnaireHeaderArray[i];
+            let questionnaire_header_id = element.questionnaire_header_id ? element.questionnaire_header_id : '';
+            const question = element.question ? element.question : '';
+            const question_type_id = element.question_type_id ? element.question_type_id : '';
+            const answer = element.answer ? element.answer:'';
+            const questionnaireFooter = element.questionnaireFooter ? element.questionnaireFooter:[];
+
+            let final_header_id = questionnaire_header_id;
+
+
+            if (questionnaire_header_id) {
+                const updateQuery = `UPDATE questionnaire_header SET question = ?, question_type_id = ?, answer = ? WHERE questionnaire_header_id = ? AND questionnaire_id = ?`;
+                await connection.query(updateQuery, [ question, question_type_id, answer, questionnaire_header_id, questionnaireId]);
             } else {
-            let insertQuestionnaireFooterQuery = 'INSERT INTO questionnaire_footer (questionnaire_header_id, option) VALUES (?, ?)';
-            let insertQuestionnaireFooterValues = [ questionnaireId, option ];
-            let insertQuestionnaireFooterResult = await connection.query(insertQuestionnaireFooterQuery, insertQuestionnaireFooterValues);
+                const insertQuery = "INSERT INTO questionnaire_header (questionnaire_id, question, question_type_id, answer) VALUES (?, ?, ?, ?)";
+                const result = await connection.query(insertQuery,[ questionnaireId, question, question_type_id, answer]);
+                final_header_id = result[0].insertId;
+                
+                
+            }
+            //insert into questionnaire Footer in Array
+            let questionnaireFooterArray = questionnaireFooter
+            for (let j = 0; j < questionnaireFooterArray.length; j++) {
+                const elements = questionnaireFooterArray[j];
+                const questionnaire_footer_id = elements.questionnaire_footer_id ? elements.questionnaire_footer_id :'';
+                const option = elements.option ? elements.option : '';
+            
+                if (questionnaire_footer_id) {
+                    let updateQuery = `UPDATE questionnaire_footer SET option  = ? WHERE questionnaire_footer_id = ? AND questionnaire_header_id = ?`;
+                    let updateValues = [ questionnaireId, option, questionnaire_footer_id ];
+                    let updateResult = await connection.query(updateQuery, updateValues);
+                } else {
+                    let insertquestionnaireFooterQuery = 'INSERT INTO questionnaire_footer (questionnaire_id,questionnaire_header_id, option) VALUES (?, ?, ?)';
+                    let insertquestionnaireFooterValues = [ questionnaireId, final_header_id, option ];
+                    let insertquestionnaireFooterResult = await connection.query(insertquestionnaireFooterQuery, insertquestionnaireFooterValues);
+                }
             }
         }
 
@@ -166,16 +189,18 @@ const updateQuestionnaire = async (req, res) => {
 
         return res.status(200).json({
             status: 200,
-            message: "Questionnaire updated successfully.",
+            message: "questionnaire updated successfully.",
         });
     } catch (error) {
+        console.log(error);
+        
        return error500(error, res);
     } finally {
         if (connection) connection.release()
     }
 }
 
-//status change of Questionnaire...
+//status change of questionnaire...
 const onStatusChange = async (req, res) => {
     const questionnaireId = parseInt(req.params.id);
     const status = parseInt(req.query.status); // Validate and parse the status parameter
@@ -190,10 +215,10 @@ const onStatusChange = async (req, res) => {
         await connection.beginTransaction();
 
         // Check if questionnaire exists
-        const isQuestionnaireExist = "SELECT * FROM questionnaire_header WHERE questionnaire_header_id  = ?";
-        const isQuestionnaireResult = await pool.query(isQuestionnaireExist,[questionnaireId]);
-        if (isQuestionnaireResult[0].length == 0) {
-            return error422("Quetion Type not found.", res);
+        const isquestionnaireExist = "SELECT * FROM questionnaire_header WHERE questionnaire_header_id  = ?";
+        const isquestionnaireResult = await pool.query(isquestionnaireExist,[questionnaireId]);
+        if (isquestionnaireResult[0].length == 0) {
+            return error422("question Type not found.", res);
         }
 
         // Validate the status parameter
@@ -204,7 +229,7 @@ const onStatusChange = async (req, res) => {
             });
         }
 
-        // Soft update the Questionnaire status
+        // Soft update the questionnaire status
         const updateQuery = `
             UPDATE questionnaire_header
             SET status = ?
@@ -218,7 +243,7 @@ const onStatusChange = async (req, res) => {
         await connection.commit();
         return res.status(200).json({
             status: 200,
-            message: `Questionnaire ${statusMessage} successfully.`,
+            message: `questionnaire ${statusMessage} successfully.`,
         });
     } catch (error) {
         console.log(error);
@@ -240,30 +265,30 @@ const getAllQuestionnaire = async (req, res) => {
         //start a transaction
         await connection.beginTransaction();
 
-        let getQuestionnaireQuery = `SELECT qh.*, qt.quetion_type, t.test_name FROM questionnaire_header qh
+        let getquestionnaireQuery = `SELECT qh.*, qt.question_type, t.test_name FROM questionnaire_header qh
         LEFT JOIN tests t ON t.test_id = qh.test_id
-        LEFT JOIN quetion_type qt ON qt.quetion_type_id = qh.quetion_type_id
+        LEFT JOIN question_type qt ON qt.question_type_id = qh.question_type_id
         WHERE 1`;
 
         let countQuery = `SELECT COUNT(*) AS total FROM questionnaire_header qh
         LEFT JOIN tests t ON t.test_id = qh.test_id
-        LEFT JOIN quetion_type qt ON qt.quetion_type_id = qh.quetion_type_id
+        LEFT JOIN question_type qt ON qt.question_type_id = qh.question_type_id
         WHERE 1`;
 
         if (key) {
             const lowercaseKey = key.toLowerCase().trim();
             if (lowercaseKey === "activated") {
-                getQuestionnaireQuery += ` AND qh.status = 1`;
+                getquestionnaireQuery += ` AND qh.status = 1`;
                 countQuery += ` AND qh.status = 1`;
             } else if (lowercaseKey === "deactivated") {
-                getQuestionnaireQuery += ` AND qh.status = 0`;
+                getquestionnaireQuery += ` AND qh.status = 0`;
                 countQuery += ` AND qh.status = 0`;
             } else {
-                getQuestionnaireQuery += ` AND LOWER(qt.quetion_type) LIKE '%${lowercaseKey}%' `;
-                countQuery += ` AND LOWER(qt.quetion_type) LIKE '%${lowercaseKey}%' `;
+                getquestionnaireQuery += ` AND LOWER(qt.question_type) LIKE '%${lowercaseKey}%' `;
+                countQuery += ` AND LOWER(qt.question_type) LIKE '%${lowercaseKey}%' `;
             }
         }
-        getQuestionnaireQuery += " ORDER BY qh.cts DESC";
+        getquestionnaireQuery += " ORDER BY qh.cts DESC";
 
         // Apply pagination if both page and perPage are provided
         let total = 0;
@@ -272,21 +297,21 @@ const getAllQuestionnaire = async (req, res) => {
             total = parseInt(totalResult[0][0].total);
 
             const start = (page - 1) * perPage;
-            getQuestionnaireQuery += ` LIMIT ${perPage} OFFSET ${start}`;
+            getquestionnaireQuery += ` LIMIT ${perPage} OFFSET ${start}`;
         }
 
-        const result = await connection.query(getQuestionnaireQuery);
+        const result = await connection.query(getquestionnaireQuery);
         const questionnaire = result[0];
 
-        // Fetch Questionnaire footer
+        // Fetch questionnaire footer
         for (let i = 0; i < questionnaire.length; i++) {
             const element = questionnaire[i];
-            let getQuestionnaireFooterQuery = `SELECT * FROM questionnaire_footer
+            let getquestionnaireFooterQuery = `SELECT * FROM questionnaire_footer
             WHERE questionnaire_header_id = ${element.questionnaire_header_id} AND status = 1`;
 
-            getQuestionnaireFooterQuery += ` ORDER BY cts DESC`;
+            getquestionnaireFooterQuery += ` ORDER BY cts DESC`;
 
-            const questionnaireFooterResult = await connection.query(getQuestionnaireFooterQuery);
+            const questionnaireFooterResult = await connection.query(getquestionnaireFooterQuery);
             questionnaire[i]['questionnaireFooter'] = questionnaireFooterResult[0];
         }
         
@@ -294,7 +319,7 @@ const getAllQuestionnaire = async (req, res) => {
         await connection.commit();
         const data = {
             status: 200,
-            message: "Questionnaire retrieved successfully",
+            message: "questionnaire retrieved successfully",
             data: questionnaire,
         };
         // Add pagination information if provided
@@ -315,7 +340,7 @@ const getAllQuestionnaire = async (req, res) => {
     }
 } 
 
-//Questionnaire list by id
+//questionnaire list by id
 const getQuestionnaire = async (req, res) => {
     const questionnaireId = parseInt(req.params.id);
     
@@ -327,13 +352,13 @@ const getQuestionnaire = async (req, res) => {
         //start a transaction
         await connection.beginTransaction();
 
-        const questionnaireQuery = `SELECT qh.*, qt.quetion_type, t.test_name FROM questionnaire_header qh
+        const questionnaireQuery = `SELECT qh.*, qt.question_type, t.test_name FROM questionnaire_header qh
         LEFT JOIN tests t ON t.test_id = qh.test_id
-        LEFT JOIN quetion_type qt ON qt.quetion_type_id = qh.quetion_type_id
+        LEFT JOIN question_type qt ON qt.question_type_id = qh.question_type_id
         WHERE questionnaire_header_id = ?`;
         const questionnaireResult = await connection.query(questionnaireQuery, [questionnaireId]);
         if (questionnaireResult[0].length == 0) {
-            return error422("Questionnaire Not Found.", res);
+            return error422("questionnaire Not Found.", res);
         }
         const questionnaire = questionnaireResult[0][0];
 
@@ -345,7 +370,7 @@ const getQuestionnaire = async (req, res) => {
 
         return res.status(200).json({
             status: 200,
-            message: "Questionnaire Retrived Successfully",
+            message: "questionnaire Retrived Successfully",
             data: questionnaire
         });
     } catch (error) {
@@ -369,7 +394,7 @@ const getQuestionnaireWma = async (req, res) => {
         let questionnaireQuery = `SELECT * FROM questionnaire_header 
         WHERE status = 1 `;
 
-        questionnaireQuery += ` ORDER BY quetion ASC`;
+        questionnaireQuery += ` ORDER BY question ASC`;
 
         const questionnaireResult = await connection.query(questionnaireQuery);
         const questionnaire = questionnaireResult[0];
@@ -379,7 +404,7 @@ const getQuestionnaireWma = async (req, res) => {
 
         return res.status(200).json({
             status: 200,
-            message: "Questionnaire retrieved successfully.",
+            message: "questionnaire retrieved successfully.",
             data: questionnaire,
         });
     } catch (error) {
