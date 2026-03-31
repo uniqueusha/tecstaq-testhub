@@ -388,7 +388,7 @@ const getQuestionnaire = async (req, res) => {
             headers[i]['questionnaireFooter'] = footerResult[0];
         }
 
-        // ✅ Attach headers to questionnaire
+        // Attach headers to questionnaire
         questionnaire['questionnaireHeader'] = headers;
 
         return res.status(200).json({

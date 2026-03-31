@@ -389,7 +389,7 @@ const studentApprove = async (req, res) => {
         const updateQuery = `
             UPDATE student_registration
             SET is_approved = ?
-            WHERE student_id = ? OR group_id = ?`;
+            WHERE student_id = ?`;
 
         await connection.query(updateQuery, [is_approved, studentId, group_id]);
 
@@ -398,6 +398,57 @@ const studentApprove = async (req, res) => {
         return res.status(200).json({
             status: 200,
             message: `Student Approved successfully.`,
+        });
+    } catch (error) {
+        console.log(error);
+        
+        return error500(error, res);
+    } finally {
+        if (connection) connection.release()
+    }
+};
+
+// Student  group approve...
+const studentGroupApprove = async (req, res) => {
+    const groupId = parseInt(req.params.id);
+    const is_approved = parseInt(req.query.is_approved); // Validate and parse the status parameter
+
+    // attempt to obtain a database connection
+    let connection = await getConnection();
+
+    try {
+
+        //start a transaction
+        await connection.beginTransaction();
+
+        // Check if Group exists
+        const isGroupExist = "SELECT * FROM student_registration WHERE group_id  = ?";
+        const isGroupResult = await pool.query(isGroupExist,[groupId]);
+        if (isGroupResult[0].length == 0) {
+            return error422("Group not found.", res);
+        }
+
+        // Soft update the student group status
+        const updateQuery = `
+            UPDATE student_registration
+            SET is_approved = ?
+            WHERE group_id = ?`;
+
+        await connection.query(updateQuery, [is_approved, groupId]);
+
+        // student approve than user active
+        const updateUserQuery = `
+            UPDATE users
+            SET status = 1
+            WHERE group_id = ?`;
+
+        await connection.query(updateUserQuery, [ groupId]);
+
+        // Commit the transaction
+        await connection.commit();
+        return res.status(200).json({
+            status: 200,
+            message: `Student Group Approved successfully.`,
         });
     } catch (error) {
         return error500(error, res);
@@ -413,5 +464,6 @@ module.exports = {
     updateStudent,
     onStatusChange,
     getStudent,
-    studentApprove   
+    studentApprove,
+    studentGroupApprove  
 }

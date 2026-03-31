@@ -17,4 +17,7 @@ router.put('/:id', studentController.updateStudent);
 router.patch('/:id', studentController.onStatusChange);
 //student Approve
 router.patch('/student-approve/:id', studentController.studentApprove);
+//student group approve
+router.patch('/student-group-approve/:id', studentController.studentGroupApprove);
+
 module.exports = router;
