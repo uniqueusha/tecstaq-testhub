@@ -254,8 +254,8 @@ const getAllStudent = async (req, res) => {
                 getStudentQuery += ` AND sr.status = 0`;
                 countQuery += ` AND sr.status = 0`;
             } else {
-                getStudentQuery += ` AND LOWER(student_name) LIKE '%${lowercaseKey}%' `;
-                countQuery += ` AND LOWER(student_name) LIKE '%${lowercaseKey}%' `;
+                getStudentQuery += ` AND LOWER(sr.student_name) LIKE '%${lowercaseKey}%' `;
+                countQuery += ` AND LOWER(sr.student_name) LIKE '%${lowercaseKey}%' `;
             }
         }
         if (group_id) {
