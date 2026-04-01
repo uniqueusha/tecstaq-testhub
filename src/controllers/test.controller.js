@@ -41,7 +41,7 @@ const createTest = async (req, res)=>{
     const group_id = req.body.group_id ? req.body.group_id:'';
     const test_name = req.body.test_name ? req.body.test_name.trim():'';
     const duration = req.body.duration ? req.body.duration:'';
-    const total_marks = req.body.total_marks ? req.body.total_marks.trim():'';
+    const total_marks = req.body.total_marks ? req.body.total_marks:'';
     const start_time = req.body.start_time ? req.body.start_time.trim():'';
     const end_time = req.body.end_time ? req.body.end_time.trim():'';
     
@@ -85,7 +85,7 @@ const updateTest = async (req, res) => {
     const group_id = req.body.group_id ? req.body.group_id:'';
     const test_name = req.body.test_name ? req.body.test_name.trim():'';
     const duration = req.body.duration ? req.body.duration:'';
-    const total_marks = req.body.total_marks ? req.body.total_marks.trim():'';
+    const total_marks = req.body.total_marks ? req.body.total_marks:'';
     const start_time = req.body.start_time ? req.body.start_time.trim():'';
     const end_time = req.body.end_time ? req.body.end_time.trim():'';
     

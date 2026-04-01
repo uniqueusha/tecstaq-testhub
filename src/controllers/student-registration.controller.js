@@ -76,10 +76,11 @@ const createStudent = async (req, res)=>{
         await connection.beginTransaction();
         const insertQuery = "INSERT INTO student_registration (group_id, student_name, email_id, phone_number, gender, college_name, course, course_year, role)VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)";
         const result = await connection.query(insertQuery,[group_id, student_name, email_id, phone_number, gender, college_name, course, course_year, role]);
+        const student_id = result[0].insertId
 
         //insert into user
-        const insertUserQuery = `INSERT INTO users (user_name, email_id, mobile_number, role, group_id ) VALUES (?, ?, ?, ?, ?)`;
-        const insertUserValues = [ student_name, email_id, phone_number, role, group_id];
+        const insertUserQuery = `INSERT INTO users (user_name, email_id, mobile_number, role, group_id, student_id ) VALUES (?, ?, ?, ?, ?)`;
+        const insertUserValues = [ student_name, email_id, phone_number, role, group_id, student_id];
         const insertuserResult = await connection.query(insertUserQuery, insertUserValues);
         const user_id = insertuserResult[0].insertId;
         
@@ -392,6 +393,14 @@ const studentApprove = async (req, res) => {
             WHERE student_id = ?`;
 
         await connection.query(updateQuery, [is_approved, studentId, group_id]);
+
+        // student approve than user active
+        const updateUserQuery = `
+            UPDATE users
+            SET status = 1
+            WHERE student_id = ?`;
+
+        await connection.query(updateUserQuery, [ studentId]);
 
         // Commit the transaction
         await connection.commit();
