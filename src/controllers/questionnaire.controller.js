@@ -362,8 +362,9 @@ const getAllQuestionnaire = async (req, res) => {
         //start a transaction
         await connection.beginTransaction();
 
-        let getquestionnaireQuery = `SELECT COUNT(q.test_id) AS total_question, q.questionnaire_id, t.test_name, t.duration, t.total_marks, t.start_time, t.end_time, q.status,q.cts FROM questionnaire q
+        let getquestionnaireQuery = `SELECT COUNT(qh.questionnaire_header_id) AS total_question,q.test_id, q.questionnaire_id, t.test_name, t.duration, t.total_marks, t.start_time, t.end_time, q.status,q.cts FROM questionnaire q
         LEFT JOIN tests t ON t.test_id = q.test_id
+        LEFT JOIN questionnaire_header qh ON qh.questionnaire_id = q.questionnaire_id
         WHERE 1`;
 
         let countQuery = `SELECT COUNT(*) AS total FROM questionnaire q
