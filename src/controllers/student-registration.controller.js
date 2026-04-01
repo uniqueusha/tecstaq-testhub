@@ -244,12 +244,12 @@ const getAllStudent = async (req, res) => {
         let getStudentQuery = `SELECT sr.*, g.group_name,t.test_name FROM student_registration sr
         LEFT JOIN groups g ON g.group_id = sr.group_id 
         LEFT JOIN tests t ON t.test_id = sr.test_id
-        WHERE 1`;
+        WHERE 1 AND role != 'admin'`;
 
         let countQuery = `SELECT COUNT(*) AS total FROM student_registration sr
         LEFT JOIN groups g ON g.group_id = sr.group_id 
         LEFT JOIN tests t ON t.test_id = sr.test_id
-        WHERE 1`;
+        WHERE 1 AND role != 'admin'`;
 
         if (key) {
             const lowercaseKey = key.toLowerCase().trim();
@@ -323,7 +323,7 @@ const getStudent = async (req, res) => {
         const studentQuery = `SELECT sr.*, g.group_name, t.test_name FROM student_registration sr
         LEFT JOIN groups g ON g.group_id = sr.group_id
         LEFT JOIN tests t ON t.test_id = sr.test_id
-        WHERE student_id = ?`;
+        WHERE student_id = ? AND role != 'admin'`;
         const studentResult = await connection.query(studentQuery, [studentId]);
         if (studentResult[0].length == 0) {
             return error422("Student Not Found.", res);
@@ -356,7 +356,7 @@ const getStudentsWma = async (req, res) => {
         let studentQuery = `SELECT sr.*, g.group_name, t.test_name FROM student_registration sr
         LEFT JOIN groups g ON g.group_id = sr.group_id
         LEFT JOIN tests t ON t.test_id = sr.test_id
-        WHERE sr.status = 1 `;
+        WHERE sr.status = 1 AND role != 'admin'`;
 
         studentQuery += ` ORDER BY sr.student_name ASC`;
 
