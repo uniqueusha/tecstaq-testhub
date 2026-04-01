@@ -254,7 +254,7 @@ const onStatusChange = async (req, res) => {
 };
 
 //all questionnaire list
-const getAllQuestionnaire = async (req, res) => {
+const getAllQuestionnaireOld = async (req, res) => {
     const { page, perPage, key } = req.query;
 
     // attempt to obtain a database connection
@@ -325,6 +325,80 @@ const getAllQuestionnaire = async (req, res) => {
         }
         questionnaire[i]['questionnaireHeader'] = questionnaireHeader;
         }
+        // Commit the transaction
+        await connection.commit();
+        const data = {
+            status: 200,
+            message: "questionnaire retrieved successfully",
+            data: questionnaire,
+        };
+        // Add pagination information if provided
+        if (page && perPage) {
+            data.pagination = {
+                per_page: perPage,
+                total: total,
+                current_page: page,
+                last_page: Math.ceil(total / perPage),
+            };
+        }
+
+        return res.status(200).json(data);
+    } catch (error) {
+        return error500(error, res);
+    } finally {
+        if (connection) connection.release()
+    }
+} 
+
+//all questionnaire list
+const getAllQuestionnaire = async (req, res) => {
+    const { page, perPage, key } = req.query;
+
+    // attempt to obtain a database connection
+    let connection = await getConnection();
+
+    try {
+
+        //start a transaction
+        await connection.beginTransaction();
+
+        let getquestionnaireQuery = `SELECT COUNT(q.test_id) AS total_question, t.* FROM questionnaire q
+        LEFT JOIN tests t ON t.test_id = q.test_id
+        WHERE 1`;
+
+        let countQuery = `SELECT COUNT(*) AS total FROM questionnaire q
+        LEFT JOIN tests t ON t.test_id = q.test_id
+        WHERE 1`;
+
+        if (key) {
+            const lowercaseKey = key.toLowerCase().trim();
+            if (lowercaseKey === "activated") {
+                getquestionnaireQuery += ` AND q.status = 1`;
+                countQuery += ` AND q.status = 1`;
+            } else if (lowercaseKey === "deactivated") {
+                getquestionnaireQuery += ` AND q.status = 0`;
+                countQuery += ` AND q.status = 0`;
+            } else {
+                getquestionnaireQuery += ` AND LOWER(t.test_name) LIKE '%${lowercaseKey}%' `;
+                countQuery += ` AND LOWER(t.test_name) LIKE '%${lowercaseKey}%' `;
+            }
+        }
+        getquestionnaireQuery += " ORDER BY q.cts DESC";
+
+        // Apply pagination if both page and perPage are provided
+        let total = 0;
+        if (page && perPage) {
+            const totalResult = await connection.query(countQuery);
+            total = parseInt(totalResult[0][0].total);
+
+            const start = (page - 1) * perPage;
+            getquestionnaireQuery += ` LIMIT ${perPage} OFFSET ${start}`;
+        }
+
+        const result = await connection.query(getquestionnaireQuery);
+        const questionnaire = result[0];
+
+    
         // Commit the transaction
         await connection.commit();
         const data = {
