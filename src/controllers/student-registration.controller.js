@@ -79,7 +79,7 @@ const createStudent = async (req, res)=>{
         const student_id = result[0].insertId
 
         //insert into user
-        const insertUserQuery = `INSERT INTO users (user_name, email_id, mobile_number, role, group_id, student_id ) VALUES (?, ?, ?, ?, ?)`;
+        const insertUserQuery = `INSERT INTO users (user_name, email_id, mobile_number, role, group_id, student_id ) VALUES (?, ?, ?, ?, ?, ?)`;
         const insertUserValues = [ student_name, email_id, phone_number, role, group_id, student_id];
         const insertuserResult = await connection.query(insertUserQuery, insertUserValues);
         const user_id = insertuserResult[0].insertId;
