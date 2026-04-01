@@ -375,7 +375,7 @@ const getStudentsWma = async (req, res) => {
 const studentApprove = async (req, res) => {
     const studentId = parseInt(req.params.id);
     const is_approved = parseInt(req.query.is_approved); // Validate and parse the status parameter
-    const group_id = parseInt(req.query.group_id);
+    
 
     // attempt to obtain a database connection
     let connection = await getConnection();
@@ -398,15 +398,15 @@ const studentApprove = async (req, res) => {
             SET is_approved = ?
             WHERE student_id = ?`;
 
-        await connection.query(updateQuery, [is_approved, studentId, group_id]);
+        await connection.query(updateQuery, [is_approved, studentId]);
 
         // student approve than user active
         const updateUserQuery = `
             UPDATE users
-            SET status = 1
+            SET status = ?
             WHERE student_id = ?`;
 
-        await connection.query(updateUserQuery, [ studentId]);
+        await connection.query(updateUserQuery, [ is_approved, studentId]);
 
         // Commit the transaction
         await connection.commit();
@@ -415,8 +415,7 @@ const studentApprove = async (req, res) => {
             message: `Student Approved successfully.`,
         });
     } catch (error) {
-        console.log(error);
-        
+
         return error500(error, res);
     } finally {
         if (connection) connection.release()
@@ -454,10 +453,10 @@ const studentGroupApprove = async (req, res) => {
         // student approve than user active
         const updateUserQuery = `
             UPDATE users
-            SET status = 1
+            SET status = ?
             WHERE group_id = ?`;
 
-        await connection.query(updateUserQuery, [ groupId]);
+        await connection.query(updateUserQuery, [ is_approved, groupId]);
 
         // Commit the transaction
         await connection.commit();
