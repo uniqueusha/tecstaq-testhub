@@ -241,11 +241,15 @@ const getAllStudent = async (req, res) => {
         //start a transaction
         await connection.beginTransaction();
 
-        let getStudentQuery = `SELECT sr.*, g.group_name FROM student_registration sr
-        LEFT JOIN groups g ON g.group_id = sr.group_id WHERE 1`;
+        let getStudentQuery = `SELECT sr.*, g.group_name,t.test_name FROM student_registration sr
+        LEFT JOIN groups g ON g.group_id = sr.group_id 
+        LEFT JOIN tests t ON t.test_id = sr.test_id
+        WHERE 1`;
 
         let countQuery = `SELECT COUNT(*) AS total FROM student_registration sr
-        LEFT JOIN groups g ON g.group_id = sr.group_id WHERE 1`;
+        LEFT JOIN groups g ON g.group_id = sr.group_id 
+        LEFT JOIN tests t ON t.test_id = sr.test_id
+        WHERE 1`;
 
         if (key) {
             const lowercaseKey = key.toLowerCase().trim();
@@ -316,7 +320,9 @@ const getStudent = async (req, res) => {
         //start a transaction
         await connection.beginTransaction();
 
-        const studentQuery = `SELECT * FROM student_registration
+        const studentQuery = `SELECT sr.*, g.group_name, t.test_name FROM student_registration sr
+        LEFT JOIN groups g ON g.group_id = sr.group_id
+        LEFT JOIN tests t ON t.test_id = sr.test_id
         WHERE student_id = ?`;
         const studentResult = await connection.query(studentQuery, [studentId]);
         if (studentResult[0].length == 0) {
@@ -347,8 +353,9 @@ const getStudentsWma = async (req, res) => {
         //start a transaction
         await connection.beginTransaction();
 
-        let studentQuery = `SELECT sr.*, g.group_name FROM student_registration sr
+        let studentQuery = `SELECT sr.*, g.group_name, t.test_name FROM student_registration sr
         LEFT JOIN groups g ON g.group_id = sr.group_id
+        LEFT JOIN tests t ON t.test_id = sr.test_id
         WHERE sr.status = 1 `;
 
         studentQuery += ` ORDER BY sr.student_name ASC`;
