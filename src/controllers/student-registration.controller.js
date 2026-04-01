@@ -40,6 +40,7 @@ error404 = (message, res) => {
 //create Student
 const createStudent = async (req, res)=>{
     const group_id = req.body.group_id ? req.body.group_id :'';
+    const test_id = req.body.test_id ? req.body.test_id :'';
     const student_name = req.body.student_name ? req.body.student_name.trim():'';
     const email_id = req.body.email_id ? req.body.email_id.trim():'';
     const phone_number = req.body.phone_number ? req.body.phone_number:'';
@@ -74,8 +75,8 @@ const createStudent = async (req, res)=>{
     try {
         // start the transaction
         await connection.beginTransaction();
-        const insertQuery = "INSERT INTO student_registration (group_id, student_name, email_id, phone_number, gender, college_name, course, course_year, role)VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        const result = await connection.query(insertQuery,[group_id, student_name, email_id, phone_number, gender, college_name, course, course_year, role]);
+        const insertQuery = "INSERT INTO student_registration (group_id, test_id, student_name, email_id, phone_number, gender, college_name, course, course_year, role)VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        const result = await connection.query(insertQuery,[group_id, test_id, student_name, email_id, phone_number, gender, college_name, course, course_year, role]);
         const student_id = result[0].insertId
 
         //insert into user
@@ -111,6 +112,7 @@ const createStudent = async (req, res)=>{
 const updateStudent = async (req, res) => {
     const studentId = parseInt(req.params.id);
     const group_id = req.body.group_id ? req.body.group_id :'';
+    const test_id = req.body.test_id ? req.body.test_id :'';
     const student_name = req.body.student_name ? req.body.student_name.trim():'';
     const email_id = req.body.email_id ? req.body.email_id.trim():'';
     const phone_number = req.body.phone_number ? req.body.phone_number:'';
@@ -156,11 +158,11 @@ const updateStudent = async (req, res) => {
         // Update the Student record with new data
         const updateQuery = `
             UPDATE student_registration
-            SET group_id = ?, student_name = ?, email_id = ?, phone_number = ?, gender = ?, college_name = ?, course = ?, course_year = ?, role = ?
+            SET group_id = ?, test_id = ?, student_name = ?, email_id = ?, phone_number = ?, gender = ?, college_name = ?, course = ?, course_year = ?, role = ?
             WHERE student_id = ?
         `;
 
-        await connection.query(updateQuery, [ group_id, student_name, email_id, phone_number, gender, college_name, course, course_year, role, studentId]);
+        await connection.query(updateQuery, [ group_id, test_id, student_name, email_id, phone_number, gender, college_name, course, course_year, role, studentId]);
         // Commit the transaction
         await connection.commit();
 

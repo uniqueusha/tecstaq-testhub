@@ -198,9 +198,11 @@ const getAllTest = async (req, res) => {
 
         let getTestQuery = `SELECT t.*, g.group_name FROM tests t
         LEFT JOIN groups g ON g.group_id = t.group_id
-        WHERE 1`;
+        WHERE 1 AND role != admin`;
 
-        let countQuery = `SELECT COUNT(*) AS total FROM tests `;
+        let countQuery = `SELECT COUNT(*) AS total FROM tests t 
+        LEFT JOIN groups g ON g.group_id = t.group_id
+        WHERE 1 AND role != admin`;
 
         if (key) {
             const lowercaseKey = key.toLowerCase().trim();
@@ -269,7 +271,7 @@ const getTest = async (req, res) => {
 
         const testQuery = `SELECT t.*, g.group_name FROM tests t
         LEFT JOIN groups g ON g.group_id = t.group_id
-        WHERE t.test_id = ?`;
+        WHERE t.test_id = ? AND role != admin`;
         const testResult = await connection.query(testQuery, [testId]);
         if (testResult[0].length == 0) {
             return error422("Test Not Found.", res);
@@ -290,7 +292,7 @@ const getTest = async (req, res) => {
 
 //get Test active...
 const getTestWma = async (req, res) => {
-   
+    const { group_id } = req.query;
     // attempt to obtain a database connection
     let connection = await getConnection();
 
@@ -300,10 +302,12 @@ const getTestWma = async (req, res) => {
         await connection.beginTransaction();
 
         let testQuery = `SELECT * FROM tests 
-        WHERE status = 1 `;
+        WHERE status = 1 AND role != admin`;
 
+        if (group_id) {
+            testQuery += ` AND group_id = ${group_id}`;
+        }
         testQuery += ` ORDER BY test_name ASC`;
-
         const testResult = await connection.query(testQuery);
         const test = testResult[0];
 
