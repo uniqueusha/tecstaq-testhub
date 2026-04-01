@@ -384,6 +384,8 @@ const getAllQuestionnaire = async (req, res) => {
                 countQuery += ` AND LOWER(t.test_name) LIKE '%${lowercaseKey}%' `;
             }
         }
+
+        
         getquestionnaireQuery += " ORDER BY q.cts DESC";
 
         // Apply pagination if both page and perPage are provided

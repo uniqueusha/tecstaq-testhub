@@ -229,7 +229,7 @@ const onStatusChange = async (req, res) => {
 
 //all Student list
 const getAllStudent = async (req, res) => {
-    const { page, perPage, key } = req.query;
+    const { page, perPage, key, group_id } = req.query;
 
     // attempt to obtain a database connection
     let connection = await getConnection();
@@ -240,10 +240,10 @@ const getAllStudent = async (req, res) => {
         await connection.beginTransaction();
 
         let getStudentQuery = `SELECT sr.*, g.group_name FROM student_registration sr
-        LEFT JOIN groups g ON g.group_id = sr.group_id`;
+        LEFT JOIN groups g ON g.group_id = sr.group_id WHERE 1`;
 
         let countQuery = `SELECT COUNT(*) AS total FROM student_registration sr
-        LEFT JOIN groups g ON g.group_id = sr.group_id`;
+        LEFT JOIN groups g ON g.group_id = sr.group_id WHERE 1`;
 
         if (key) {
             const lowercaseKey = key.toLowerCase().trim();
@@ -257,6 +257,10 @@ const getAllStudent = async (req, res) => {
                 getStudentQuery += ` AND LOWER(student_name) LIKE '%${lowercaseKey}%' `;
                 countQuery += ` AND LOWER(student_name) LIKE '%${lowercaseKey}%' `;
             }
+        }
+        if (group_id) {
+            getStudentQuery += ` AND sr.group_id = ${group_id}`;
+            countQuery += `  AND sr.group_id = ${group_id}`;
         }
         getStudentQuery += " ORDER BY sr.cts DESC";
 
