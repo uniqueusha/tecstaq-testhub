@@ -352,7 +352,7 @@ const getAllQuestionnaireOld = async (req, res) => {
 
 //all questionnaire list
 const getAllQuestionnaire = async (req, res) => {
-    const { page, perPage, key } = req.query;
+    const { page, perPage, key, student_id } = req.query;
 
     // attempt to obtain a database connection
     let connection = await getConnection();
@@ -362,31 +362,37 @@ const getAllQuestionnaire = async (req, res) => {
         //start a transaction
         await connection.beginTransaction();
 
-        let getquestionnaireQuery = `SELECT COUNT(qh.questionnaire_header_id) AS total_question,q.test_id, q.questionnaire_id, t.test_name, t.duration, t.total_marks, t.start_time, t.end_time, q.status,q.cts FROM questionnaire q
-        LEFT JOIN tests t ON t.test_id = q.test_id
+        let getquestionnaireQuery = `SELECT s.test_id, s.student_id, t.test_name, t.test_date, t.duration, t.total_marks, t.start_time, t.end_time, q.questionnaire_id, qh.question, qh.answer, qh.questionnaire_header_id FROM student_registration s
+        LEFT JOIN tests t ON t.test_id = s.test_id
+        LEFT JOIN questionnaire q ON q.test_id = s.test_id
         LEFT JOIN questionnaire_header qh ON qh.questionnaire_id = q.questionnaire_id
         WHERE 1`;
 
-        let countQuery = `SELECT COUNT(*) AS total FROM questionnaire q
-        LEFT JOIN tests t ON t.test_id = q.test_id
+        let countQuery = `SELECT COUNT(*) AS total FROM student_registration s
+        LEFT JOIN tests t ON t.test_id = s.test_id
+        LEFT JOIN questionnaire q ON q.test_id = s.test_id
+        LEFT JOIN questionnaire_header qh ON qh.questionnaire_id = q.questionnaire_id
         WHERE 1`;
 
         if (key) {
             const lowercaseKey = key.toLowerCase().trim();
             if (lowercaseKey === "activated") {
-                getquestionnaireQuery += ` AND q.status = 1`;
-                countQuery += ` AND q.status = 1`;
+                getquestionnaireQuery += ` AND s.status = 1`;
+                countQuery += ` AND s.status = 1`;
             } else if (lowercaseKey === "deactivated") {
-                getquestionnaireQuery += ` AND q.status = 0`;
-                countQuery += ` AND q.status = 0`;
+                getquestionnaireQuery += ` AND s.status = 0`;
+                countQuery += ` AND s.status = 0`;
             } else {
                 getquestionnaireQuery += ` AND LOWER(t.test_name) LIKE '%${lowercaseKey}%' `;
                 countQuery += ` AND LOWER(t.test_name) LIKE '%${lowercaseKey}%' `;
             }
         }
-
+        if (student_id) {
+            getquestionnaireQuery += ` AND s.student_id = ${student_id}`;
+            countQuery += ` AND s.student_id = ${student_id}`;
+        }
         
-        getquestionnaireQuery += " ORDER BY q.cts DESC";
+        getquestionnaireQuery += " ORDER BY s.cts DESC";
 
         // Apply pagination if both page and perPage are provided
         let total = 0;
@@ -421,6 +427,8 @@ const getAllQuestionnaire = async (req, res) => {
 
         return res.status(200).json(data);
     } catch (error) {
+        console.log(error);
+        
         return error500(error, res);
     } finally {
         if (connection) connection.release()
