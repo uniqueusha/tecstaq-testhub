@@ -5,6 +5,8 @@ const questionnaireController = require('../controllers/questionnaire.controller
 const checkAuth = require('../middleware/check.auth')
 
 router.post('/', questionnaireController.createQuestionnaire);
+//answer
+router.post('/answer', questionnaireController.createAnswer);
 //all list
 router.get('/', questionnaireController.getAllQuestionnaire);
 //active list  
