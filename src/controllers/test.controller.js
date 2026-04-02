@@ -40,6 +40,7 @@ error404 = (message, res) => {
 const createTest = async (req, res)=>{
     const group_id = req.body.group_id ? req.body.group_id:'';
     const test_name = req.body.test_name ? req.body.test_name.trim():'';
+    const test_date = req.body.test_date ? req.body.test_date:'';
     const duration = req.body.duration ? req.body.duration:'';
     const total_marks = req.body.total_marks ? req.body.total_marks:'';
     const start_time = req.body.start_time ? req.body.start_time.trim():'';
@@ -63,8 +64,8 @@ const createTest = async (req, res)=>{
     try {
         // start the transaction
         await connection.beginTransaction();
-        const insertQuery = "INSERT INTO tests ( group_id, test_name, duration, total_marks, start_time, end_time) VALUES (?, ?, ?, ?, ?, ?)";
-        const result = await connection.query(insertQuery,[ group_id, test_name, duration, total_marks, start_time, end_time]);
+        const insertQuery = "INSERT INTO tests ( group_id, test_name, test_date, duration, total_marks, start_time, end_time) VALUES (?, ?, ?, ?, ?, ?, ?)";
+        const result = await connection.query(insertQuery,[ group_id, test_name, test_date, duration, total_marks, start_time, end_time]);
 
         await connection.commit()
         return res.status(200).json({
@@ -84,6 +85,7 @@ const updateTest = async (req, res) => {
     const testId = parseInt(req.params.id);
     const group_id = req.body.group_id ? req.body.group_id:'';
     const test_name = req.body.test_name ? req.body.test_name.trim():'';
+    const test_date = req.body.test_date ? req.body.test_date:'';
     const duration = req.body.duration ? req.body.duration:'';
     const total_marks = req.body.total_marks ? req.body.total_marks:'';
     const start_time = req.body.start_time ? req.body.start_time.trim():'';
@@ -113,11 +115,11 @@ const updateTest = async (req, res) => {
         // Update the Test record with new data
         const updateQuery = `
             UPDATE tests
-            SET group_id = ?, test_name = ?, duration = ?, total_marks = ?, start_time = ?, end_time = ?
+            SET group_id = ?, test_name = ?, test_date = ?, duration = ?, total_marks = ?, start_time = ?, end_time = ?
             WHERE test_id = ?
         `;
 
-        await connection.query(updateQuery, [ group_id, test_name, duration, total_marks, start_time, end_time, testId]);
+        await connection.query(updateQuery, [ group_id, test_name, test_date, duration, total_marks, start_time, end_time, testId]);
         // Commit the transaction
         await connection.commit();
 
