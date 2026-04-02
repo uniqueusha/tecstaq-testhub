@@ -449,10 +449,11 @@ const getQuestionnaire = async (req, res) => {
         //start a transaction
         await connection.beginTransaction();
 
-        let getquestionnaireQuery = `SELECT q.*, s.test_id,t.test_name,t.duration,t.total_marks,t.start_time,t.end_time, s.student_id, t.test_name FROM questionnaire q
+        let getquestionnaireQuery = `SELECT q.*, s.test_id,g.group_name,t.duration,t.total_marks,t.start_time,t.end_time, s.student_id,t.test_date, t.test_name FROM questionnaire q
         LEFT JOIN tests t ON t.test_id = q.test_id
         LEFT JOIN student_registration s ON s.test_id = t.test_id
         LEFT JOIN questionnaire_header qh ON qh.questionnaire_id = q.questionnaire_id
+        LEFT JOIN groups g ON g.group_id = t.group_id
         WHERE q.questionnaire_id = ?`;
         let questionnaireResult = await connection.query(getquestionnaireQuery, [questionnaireId]);
         if (questionnaireResult[0].length == 0) {
