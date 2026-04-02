@@ -9,6 +9,8 @@ router.post('/', questionnaireController.createQuestionnaire);
 router.get('/', questionnaireController.getAllQuestionnaire);
 //active list  
 router.get('/wma', questionnaireController.getQuestionnaireWma);
+//get student wise test list
+router.get('/student-test', questionnaireController.getStudentTestQuestionnaire);
 //get list by id
 router.get('/:id', questionnaireController.getQuestionnaire);
 // update priority

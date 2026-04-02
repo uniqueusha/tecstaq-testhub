@@ -514,12 +514,114 @@ const getQuestionnaireWma = async (req, res) => {
     }
 }
 
+//get student list test wise
+const getStudentTestQuestionnaire = async (req, res) => {
+    const { page, perPage, key, student_id } = req.query;
+
+    // attempt to obtain a database connection
+    let connection = await getConnection();
+
+    try {
+
+        //start a transaction
+        await connection.beginTransaction();
+
+        let getquestionnaireQuery = `SELECT s.test_id, s.student_id, t.test_name, t.duration, t.total_marks,t.start_time,t.end_time, q.questionnaire_id, qh.question, qh.answer,qh.questionnaire_header_id FROM student_registration s
+        LEFT JOIN tests t ON t.test_id = s.test_id
+        LEFT JOIN questionnaire q ON q.test_id = s.test_id
+        LEFT JOIN questionnaire_header qh ON qh.questionnaire_id = q.questionnaire_id
+        WHERE 1`;
+
+        let countQuery = `SELECT COUNT(*) AS total student_registration s
+        LEFT JOIN tests t ON t.test_id = s.test_id
+        LEFT JOIN questionnaire q ON q.test_id = s.test_id
+        LEFT JOIN questionnaire_header qh ON qh.questionnaire_id = q.questionnaire_id
+        WHERE 1`;
+
+
+        if (key) {
+            const lowercaseKey = key.toLowerCase().trim();
+            if (lowercaseKey === "activated") {
+                getquestionnaireQuery += ` AND s.status = 1`;
+                countQuery += ` AND s.status = 1`;
+            } else if (lowercaseKey === "deactivated") {
+                getquestionnaireQuery += ` AND s.status = 0`;
+                countQuery += ` AND s.status = 0`;
+            } else {
+                getquestionnaireQuery += ` AND LOWER(t.test_name) LIKE '%${lowercaseKey}%' `;
+                countQuery += ` AND LOWER(t.test_name) LIKE '%${lowercaseKey}%' `;
+            }
+        }
+
+        if (student_id) {
+            getquestionnaireQuery += ` AND s.student_id = ${student_id}`;
+            countQuery += ` AND s.student_id = ${student_id}`;
+        }
+        getquestionnaireQuery += " ORDER BY s.cts DESC";
+
+        // Apply pagination if both page and perPage are provided
+        let total = 0;
+        if (page && perPage) {
+            const totalResult = await connection.query(countQuery);
+            total = parseInt(totalResult[0][0].total);
+
+            const start = (page - 1) * perPage;
+            getquestionnaireQuery += ` LIMIT ${perPage} OFFSET ${start}`;
+        }
+
+        const result = await connection.query(getquestionnaireQuery);
+        const questionnaire = result[0];
+        
+        
+
+        for (let j = 0; j < questionnaire.length; j++) {
+            const element = questionnaire[j];
+
+            let getquestionnaireFooterQuery = `SELECT * FROM questionnaire_footer
+            WHERE questionnaire_header_id = ${element.questionnaire_header_id} AND status = 1`;
+
+            getquestionnaireFooterQuery += ` ORDER BY cts DESC`;
+
+            const questionnaireFooterResult = await connection.query(getquestionnaireFooterQuery);
+            questionnaire[j]['questionnaireFooter'] = questionnaireFooterResult[0];
+        }
+
+    
+        // Commit the transaction
+        await connection.commit();
+        const data = {
+            status: 200,
+            message: "questionnaire retrieved successfully",
+            data: questionnaire,
+        };
+        // Add pagination information if provided
+        if (page && perPage) {
+            data.pagination = {
+                per_page: perPage,
+                total: total,
+                current_page: page,
+                last_page: Math.ceil(total / perPage),
+            };
+        }
+
+        return res.status(200).json(data);
+    } catch (error) {
+        console.log(error);
+        
+        return error500(error, res);
+    } finally {
+        if (connection) connection.release()
+    }
+} 
+
+
 module.exports = {
     createQuestionnaire,
     getAllQuestionnaire,
     getQuestionnaireWma,
     updateQuestionnaire,
     onStatusChange,
-    getQuestionnaire
+    getQuestionnaire,
+    getStudentTestQuestionnaire
     
 }
