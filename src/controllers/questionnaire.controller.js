@@ -532,7 +532,7 @@ const getStudentTestQuestionnaire = async (req, res) => {
         LEFT JOIN questionnaire_header qh ON qh.questionnaire_id = q.questionnaire_id
         WHERE 1`;
 
-        let countQuery = `SELECT COUNT(*) AS total student_registration s
+        let countQuery = `SELECT COUNT(*) AS total FROM student_registration s
         LEFT JOIN tests t ON t.test_id = s.test_id
         LEFT JOIN questionnaire q ON q.test_id = s.test_id
         LEFT JOIN questionnaire_header qh ON qh.questionnaire_id = q.questionnaire_id
