@@ -636,7 +636,7 @@ const createAnswer = async (req, res)=>{
     const student_id = req.body.student_id ? req.body.student_id:'';
     const questionnaire_header_id = req.body.questionnaire_header_id ? req.body.questionnaire_header_id:'';
     const questionnaire_footer_id = req.body.questionnaire_footer_id ? req.body.questionnaire_footer_id:'';
-    const is_correct = req.body.is_correct ? req.body.is_correct:'';
+    
     
     if (!student_id) {
         return error422("Student id is required.", res);
@@ -655,6 +655,7 @@ const createAnswer = async (req, res)=>{
     if (isHeaderResult[0].length == 0) {
         return error422("Header Not Found", res);
     }
+    const correct_answer = isHeaderResult[0][0].answer;
 
     // Check if footer  exist
     const isFooterExist = "SELECT * FROM questionnaire_footer WHERE questionnaire_footer_id = ?";
@@ -662,14 +663,23 @@ const createAnswer = async (req, res)=>{
     if (isFooterResult[0].length == 0) {
         return error422("Footer Not Found", res);
     }
+    const selected_answer = isFooterResult[0][0].option;
+    
+    // ✅ Compare Answers
+    let result_status = (correct_answer === selected_answer) ? "pass" : "fail";
+    
+    let marks = 0
+    if (correct_answer === selected_answer) {
+        marks = isHeaderResult[0][0].question_mark
+    }
 
     let connection = await getConnection();
 
     try {
         // start the transaction
         await connection.beginTransaction();
-        const insertQuery = "INSERT INTO questionnaire_answers ( student_id, questionnaire_header_id, questionnaire_footer_id, is_correct) VALUES (?, ?, ?, ?)";
-        const result = await connection.query(insertQuery,[ student_id, questionnaire_header_id, questionnaire_footer_id, is_correct]);
+        const insertQuery = "INSERT INTO questionnaire_answers ( student_id, questionnaire_header_id, questionnaire_footer_id, is_correct, result_status, marks ) VALUES (?, ?, ?, ?, ?, ?)";
+        const result = await connection.query(insertQuery,[ student_id, questionnaire_header_id, questionnaire_footer_id, correct_answer, result_status, marks ]);
 
         await connection.commit()
         return res.status(200).json({
