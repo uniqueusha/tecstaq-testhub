@@ -633,15 +633,12 @@ const getStudentTestQuestionnaire = async (req, res) => {
 
 //add answer
 const createAnswer = async (req, res)=>{
+
     const student_id = req.body.student_id ? req.body.student_id:'';
-    const questionnaire_header_id = req.body.questionnaire_header_id ? req.body.questionnaire_header_id:'';
-    const questionnaire_footer_id = req.body.questionnaire_footer_id ? req.body.questionnaire_footer_id:'';
-    
-    
+    const answer = req.body.answer ? req.body.answer:[];
     if (!student_id) {
         return error422("Student id is required.", res);
     } 
-
     // Check if Student  exist
     const isStudentExist = "SELECT * FROM student_registration WHERE student_id = ?";
     const isStudentResult = await pool.query(isStudentExist,[student_id]);
@@ -649,37 +646,46 @@ const createAnswer = async (req, res)=>{
         return error422("Student Not Found", res);
     }
 
-    // Check if header  exist
-    const isHeaderExist = "SELECT * FROM questionnaire_header WHERE questionnaire_header_id = ?";
-    const isHeaderResult = await pool.query(isHeaderExist,[questionnaire_header_id]);
-    if (isHeaderResult[0].length == 0) {
-        return error422("Header Not Found", res);
-    }
-    const correct_answer = isHeaderResult[0][0].answer;
-
-    // Check if footer  exist
-    const isFooterExist = "SELECT * FROM questionnaire_footer WHERE questionnaire_footer_id = ?";
-    const isFooterResult = await pool.query(isFooterExist,[questionnaire_footer_id]);
-    if (isFooterResult[0].length == 0) {
-        return error422("Footer Not Found", res);
-    }
-    const selected_answer = isFooterResult[0][0].option;
-    
-    // ✅ Compare Answers
-    let result_status = (correct_answer === selected_answer) ? "pass" : "fail";
-    
-    let marks = 0
-    if (correct_answer === selected_answer) {
-        marks = isHeaderResult[0][0].question_mark
-    }
-
     let connection = await getConnection();
 
     try {
         // start the transaction
         await connection.beginTransaction();
-        const insertQuery = "INSERT INTO questionnaire_answers ( student_id, questionnaire_header_id, questionnaire_footer_id, is_correct, result_status, marks ) VALUES (?, ?, ?, ?, ?, ?)";
-        const result = await connection.query(insertQuery,[ student_id, questionnaire_header_id, questionnaire_footer_id, correct_answer, result_status, marks ]);
+        const insertAnswerQuery = "INSERT INTO questionnaire_answers ( student_id ) VALUES ( ? )";
+        const answerResult = await connection.query(insertAnswerQuery,[ student_id ]);
+        const answer_id = answerResult[0].insertId;
+
+    let answerArray = answer;
+    for (let i = 0; i < answerArray.length; i++) {
+        const element = answerArray[i];
+        const questionnaire_header_id = element.questionnaire_header_id ? element.questionnaire_header_id:'';
+        const questionnaire_footer_id = element.questionnaire_footer_id ? element.questionnaire_footer_id:'';
+
+        // Check if header  exist
+        const isHeaderExist = "SELECT * FROM questionnaire_header WHERE questionnaire_header_id = ?";
+        const isHeaderResult = await connection.query(isHeaderExist,[questionnaire_header_id]);
+        
+        if (isHeaderResult[0].length == 0) {
+            return error422("Header Not Found", res);
+        }
+        const correct_answer = isHeaderResult[0][0].answer;
+        // Check if footer  exist
+        const isFooterExist = "SELECT * FROM questionnaire_footer WHERE questionnaire_footer_id = ?";
+        const isFooterResult = await connection.query(isFooterExist,[questionnaire_footer_id]);
+        if (isFooterResult[0].length == 0) {
+            return error422("Footer Not Found", res);
+        }
+        const selected_answer = isFooterResult[0][0].option;
+        // ✅ Compare Answers
+        let result_status = (correct_answer === selected_answer) ? "pass" : "fail";
+    
+        let marks = 0
+        if (correct_answer === selected_answer) {
+            marks = isHeaderResult[0][0].question_mark
+        }
+        const insertQuery = "INSERT INTO questionnaire_answers_footer (answer_id, questionnaire_header_id, questionnaire_footer_id, is_correct, result_status, marks ) VALUES ( ?, ?, ?, ?, ?, ?)";
+        const result = await connection.query(insertQuery,[ answer_id,questionnaire_header_id, questionnaire_footer_id, correct_answer, result_status, marks ]);
+    }
 
         await connection.commit()
         return res.status(200).json({
@@ -704,5 +710,4 @@ module.exports = {
     getQuestionnaire,
     getStudentTestQuestionnaire,
     createAnswer
-    
 }

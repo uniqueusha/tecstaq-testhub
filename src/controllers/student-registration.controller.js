@@ -231,7 +231,7 @@ const onStatusChange = async (req, res) => {
 
 //all Student list
 const getAllStudent = async (req, res) => {
-    const { page, perPage, key, group_id } = req.query;
+    const { page, perPage, key, group_id , test_id, fromDate, toDate} = req.query;
 
     // attempt to obtain a database connection
     let connection = await getConnection();
@@ -264,9 +264,18 @@ const getAllStudent = async (req, res) => {
                 countQuery += ` AND LOWER(sr.student_name) LIKE '%${lowercaseKey}%' `;
             }
         }
+        // from date and to date
+        if (fromDate && toDate) {
+            getStudentQuery += ` AND DATE(sr.cts) BETWEEN '${fromDate}' AND '${toDate}'`;
+            countQuery += ` AND DATE(sr.cts) BETWEEN '${fromDate}' AND '${toDate}'`;
+        }
         if (group_id) {
             getStudentQuery += ` AND sr.group_id = ${group_id}`;
             countQuery += `  AND sr.group_id = ${group_id}`;
+        }
+        if (test_id) {
+            getStudentQuery += ` AND sr.test_id = ${test_id}`;
+            countQuery += `  AND sr.test_id = ${test_id}`;
         }
         getStudentQuery += " ORDER BY sr.cts DESC";
 
