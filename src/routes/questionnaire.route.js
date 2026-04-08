@@ -13,6 +13,8 @@ router.get('/', questionnaireController.getAllQuestionnaire);
 router.get('/wma', questionnaireController.getQuestionnaireWma);
 //get student wise test list
 router.get('/student-test', questionnaireController.getStudentTestQuestionnaire);
+//get answer list
+router.get('/answer-list', questionnaireController.getAllAnswer);
 //get list by id
 router.get('/:id', questionnaireController.getQuestionnaire);
 // update priority

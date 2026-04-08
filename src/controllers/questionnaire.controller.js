@@ -92,8 +92,6 @@ const createQuestionnaire = async (req, res)=>{
             message:"questionnaire created successfully."
         })
     } catch (error) {
-        console.log(error);
-        
         if (connection) connection.rollback();
         return error500(error, res);
     } finally{
@@ -194,8 +192,6 @@ const updateQuestionnaire = async (req, res) => {
             message: "questionnaire updated successfully.",
         });
     } catch (error) {
-        console.log(error);
-        
        return error500(error, res);
     } finally {
         if (connection) connection.release()
@@ -248,7 +244,6 @@ const onStatusChange = async (req, res) => {
             message: `questionnaire ${statusMessage} successfully.`,
         });
     } catch (error) {
-        console.log(error);
         return error500(error, res);
     } finally {
         if (connection) connection.release()
@@ -355,7 +350,10 @@ const getAllQuestionnaireOld = async (req, res) => {
 //all questionnaire list
 const getAllQuestionnaire = async (req, res) => {
     const { page, perPage, key, student_id } = req.query;
-
+     const newDate = new Date(); // Current timestamp
+    const todayDate = newDate.toISOString().split('T')[0];
+    // const todayDate = newDate.toLocaleDateString('en-CA');
+    
     // attempt to obtain a database connection
     let connection = await getConnection();
 
@@ -368,13 +366,13 @@ const getAllQuestionnaire = async (req, res) => {
         LEFT JOIN tests t ON t.test_id = s.test_id
         LEFT JOIN questionnaire q ON q.test_id = s.test_id
         LEFT JOIN groups g ON g.group_id = t.group_id
-        WHERE 1`;
+        WHERE DATE(t.test_date) = '${todayDate}'`;
 
         let countQuery = `SELECT COUNT(*) AS total FROM student_registration s
         LEFT JOIN tests t ON t.test_id = s.test_id
         LEFT JOIN questionnaire q ON q.test_id = s.test_id
         LEFT JOIN groups g ON g.group_id = t.group_id
-        WHERE 1`;
+        WHERE DATE(t.test_date) = '${todayDate}'`;
 
         if (key) {
             const lowercaseKey = key.toLowerCase().trim();
@@ -395,7 +393,7 @@ const getAllQuestionnaire = async (req, res) => {
         }
         
         getquestionnaireQuery += " ORDER BY s.cts DESC";
-
+    
         // Apply pagination if both page and perPage are provided
         let total = 0;
         if (page && perPage) {
@@ -408,7 +406,6 @@ const getAllQuestionnaire = async (req, res) => {
 
         const result = await connection.query(getquestionnaireQuery);
         const questionnaire = result[0];
-
     
         // Commit the transaction
         await connection.commit();
@@ -429,8 +426,6 @@ const getAllQuestionnaire = async (req, res) => {
 
         return res.status(200).json(data);
     } catch (error) {
-        console.log(error);
-        
         return error500(error, res);
     } finally {
         if (connection) connection.release()
@@ -623,8 +618,6 @@ const getStudentTestQuestionnaire = async (req, res) => {
 
         return res.status(200).json(data);
     } catch (error) {
-        console.log(error);
-        
         return error500(error, res);
     } finally {
         if (connection) connection.release()
@@ -633,7 +626,6 @@ const getStudentTestQuestionnaire = async (req, res) => {
 
 //add answer
 const createAnswer = async (req, res)=>{
-
     const student_id = req.body.student_id ? req.body.student_id:'';
     const answer = req.body.answer ? req.body.answer:[];
     if (!student_id) {
@@ -658,30 +650,31 @@ const createAnswer = async (req, res)=>{
     let answerArray = answer;
     for (let i = 0; i < answerArray.length; i++) {
         const element = answerArray[i];
-        const questionnaire_header_id = element.questionnaire_header_id ? element.questionnaire_header_id:'';
-        const questionnaire_footer_id = element.questionnaire_footer_id ? element.questionnaire_footer_id:'';
+        const questionnaire_header_id = element.questionnaire_header_id ? element.questionnaire_header_id: 0;
+        const questionnaire_footer_id = element.questionnaire_footer_id ? element.questionnaire_footer_id: 0;
 
         // Check if header  exist
         const isHeaderExist = "SELECT * FROM questionnaire_header WHERE questionnaire_header_id = ?";
         const isHeaderResult = await connection.query(isHeaderExist,[questionnaire_header_id]);
         
-        if (isHeaderResult[0].length == 0) {
-            return error422("Header Not Found", res);
-        }
-        const correct_answer = isHeaderResult[0][0].answer;
+        // if (isHeaderResult[0].length == 0) {
+        //     return error422("Header Not Found", res);
+        // }
+        let correct_answer = isHeaderResult[0][0].answer ;
         // Check if footer  exist
         const isFooterExist = "SELECT * FROM questionnaire_footer WHERE questionnaire_footer_id = ?";
         const isFooterResult = await connection.query(isFooterExist,[questionnaire_footer_id]);
-        if (isFooterResult[0].length == 0) {
-            return error422("Footer Not Found", res);
-        }
-        const selected_answer = isFooterResult[0][0].option;
+        // if (isFooterResult[0].length == 0) {
+        //     return error422("Footer Not Found", res);
+        // }
+        // let selected_answer = isFooterResult[0][0].option || null;
+        let selected_answer = isFooterResult[0]?.[0]?.option || null;
         // ✅ Compare Answers
         let result_status = (correct_answer === selected_answer) ? "pass" : "fail";
     
         let marks = 0
         if (correct_answer === selected_answer) {
-            marks = isHeaderResult[0][0].question_mark
+            marks = isHeaderResult[0][0].question_mark || 0
         }
         const insertQuery = "INSERT INTO questionnaire_answers_footer (answer_id, questionnaire_header_id, questionnaire_footer_id, is_correct, result_status, marks ) VALUES ( ?, ?, ?, ?, ?, ?)";
         const result = await connection.query(insertQuery,[ answer_id,questionnaire_header_id, questionnaire_footer_id, correct_answer, result_status, marks ]);
@@ -700,6 +693,98 @@ const createAnswer = async (req, res)=>{
     }
 }
 
+//answer list
+const getAllAnswer = async (req, res) => {
+    const { page, perPage, key, student_id } = req.query;
+    
+    // attempt to obtain a database connection
+    let connection = await getConnection();
+
+    try {
+
+        //start a transaction
+        await connection.beginTransaction();
+
+        let getAnswerQuery = `SELECT qa.*,u.user_name FROM questionnaire_answers qa
+        LEFT JOIN users u ON u.student_id = qa.student_id
+        WHERE 1`;
+
+        let countQuery = `SELECT COUNT(*) AS total FROM questionnaire_answers qa
+        LEFT JOIN users u ON u.student_id = qa.student_id
+        WHERE 1`;
+
+        if (key) {
+            const lowercaseKey = key.toLowerCase().trim();
+            if (lowercaseKey === "activated") {
+                getAnswerQuery += ` AND qa.status = 1`;
+                countQuery += ` AND qa.status = 1`;
+            } else if (lowercaseKey === "deactivated") {
+                getAnswerQuery += ` AND qa.status = 0`;
+                countQuery += ` AND qa.status = 0`;
+            } else {
+                getAnswerQuery += ` AND LOWER(u.user_name) LIKE '%${lowercaseKey}%' `;
+                countQuery += ` AND LOWER(u.user_name) LIKE '%${lowercaseKey}%' `;
+            }
+        }
+        if (student_id) {
+            getAnswerQuery += ` AND qa.student_id = ${student_id}`;
+            countQuery += ` AND qa.student_id = ${student_id}`;
+        }
+        
+        getAnswerQuery += " ORDER BY qa.cts DESC";
+    
+        // Apply pagination if both page and perPage are provided
+        let total = 0;
+        if (page && perPage) {
+            const totalResult = await connection.query(countQuery);
+            total = parseInt(totalResult[0][0].total);
+
+            const start = (page - 1) * perPage;
+            getAnswerQuery += ` LIMIT ${perPage} OFFSET ${start}`;
+        }
+
+        const result = await connection.query(getAnswerQuery);
+        const answers = result[0];
+        for (let i = 0; i < answers.length; i++) {
+            const element = answers[i];
+            let getAnswerFooterQuery = `SELECT qaf.*, qh.question,qf.option AS student_select_ans FROM questionnaire_answers_footer qaf
+            LEFT JOIN questionnaire_header qh ON qh.questionnaire_header_id = qaf.questionnaire_header_id
+            LEFT JOIN questionnaire_footer qf ON qf.questionnaire_footer_id = qaf.questionnaire_footer_id
+            WHERE qh.questionnaire_id = ${element.answer_id} AND qaf.status = 1`;
+
+            getAnswerFooterQuery += ` ORDER BY qaf.cts DESC`;
+
+            const answerFooterResult = await connection.query(getAnswerFooterQuery);
+            answers[i]['answer'] = answerFooterResult[0];
+        }
+    
+        // Commit the transaction
+        await connection.commit();
+        const data = {
+            status: 200,
+            message: "Answer retrieved successfully",
+            data: answers,
+        };
+        // Add pagination information if provided
+        if (page && perPage) {
+            data.pagination = {
+                per_page: perPage,
+                total: total,
+                current_page: page,
+                last_page: Math.ceil(total / perPage),
+            };
+        }
+
+        return res.status(200).json(data);
+    } catch (error) {
+        console.log(error);
+        
+        return error500(error, res);
+    } finally {
+        if (connection) connection.release()
+    }
+} 
+
 
 module.exports = {
     createQuestionnaire,
@@ -709,5 +794,6 @@ module.exports = {
     onStatusChange,
     getQuestionnaire,
     getStudentTestQuestionnaire,
-    createAnswer
+    createAnswer,
+    getAllAnswer
 }
