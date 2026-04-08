@@ -808,12 +808,16 @@ const getAllAnswer = async (req, res) => {
         //start a transaction
         await connection.beginTransaction();
 
-        let getAnswerQuery = `SELECT qa.*,u.user_name FROM questionnaire_answers qa
+        let getAnswerQuery = `SELECT qa.*,u.user_name, t.test_name, t.test_date,t.duration,t.total_marks,t.start_time,t.end_time FROM questionnaire_answers qa
         LEFT JOIN users u ON u.student_id = qa.student_id
+        LEFT JOIN student_registration s ON s.student_id = qa.student_id
+        LEFT JOIN tests t ON t.test_id = s.test_id
         WHERE 1`;
 
         let countQuery = `SELECT COUNT(*) AS total FROM questionnaire_answers qa
         LEFT JOIN users u ON u.student_id = qa.student_id
+        LEFT JOIN student_registration s ON s.student_id = qa.student_id
+        LEFT JOIN tests t ON t.test_id = s.test_id
         WHERE 1`;
 
         if (key) {
@@ -991,9 +995,7 @@ const getResult = async (req, res) => {
             t.total_marks,
 
             COUNT(qaf.answer_id) AS attempted_questions,
-
             SUM(CASE WHEN qaf.is_correct = 1 THEN 1 ELSE 0 END) AS correct_questions,
-
             SUM(CASE WHEN qaf.is_correct = 0 THEN 1 ELSE 0 END) AS wrong_questions,
 
             SUM(CASE WHEN qaf.is_correct = 1 THEN qaf.marks ELSE 0 END) AS correct_marks
