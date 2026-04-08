@@ -348,7 +348,7 @@ const getAllQuestionnaireOld = async (req, res) => {
 } 
 
 //all questionnaire list
-const getAllQuestionnaire = async (req, res) => {
+const getAllQuestionnaireStudent = async (req, res) => {
     const { page, perPage, key, student_id } = req.query;
      const newDate = new Date(); // Current timestamp
     const todayDate = newDate.toISOString().split('T')[0];
@@ -426,6 +426,91 @@ const getAllQuestionnaire = async (req, res) => {
 
         return res.status(200).json(data);
     } catch (error) {
+        return error500(error, res);
+    } finally {
+        if (connection) connection.release()
+    }
+} 
+const getAllQuestionnaire = async (req, res) => {
+    const { page, perPage, key, student_id } = req.query;
+     const newDate = new Date(); // Current timestamp
+    const todayDate = newDate.toISOString().split('T')[0];
+    // const todayDate = newDate.toLocaleDateString('en-CA');
+    
+    // attempt to obtain a database connection
+    let connection = await getConnection();
+
+    try {
+
+        //start a transaction
+        await connection.beginTransaction();
+
+        let getquestionnaireQuery = `SELECT q.test_id, q.questionnaire_id, g.group_name, s.student_id, t.test_name, t.test_date, t.duration, t.total_marks, t.start_time, t.end_time FROM  questionnaire q
+        LEFT JOIN tests t ON t.test_id = q.test_id
+        LEFT JOIN student_registration s ON q.test_id = s.test_id
+        LEFT JOIN groups g ON g.group_id = t.group_id
+        WHERE 1`;
+
+        let countQuery = `SELECT COUNT(*) AS total FROM questionnaire q
+        LEFT JOIN tests t ON t.test_id = q.test_id
+        LEFT JOIN student_registration s ON q.test_id = s.test_id
+        LEFT JOIN groups g ON g.group_id = t.group_id
+        WHERE 1`;
+
+        if (key) {
+            const lowercaseKey = key.toLowerCase().trim();
+            if (lowercaseKey === "activated") {
+                getquestionnaireQuery += ` AND q.status = 1`;
+                countQuery += ` AND q.status = 1`;
+            } else if (lowercaseKey === "deactivated") {
+                getquestionnaireQuery += ` AND q.status = 0`;
+                countQuery += ` AND q.status = 0`;
+            } else {
+                getquestionnaireQuery += ` AND LOWER(t.test_name) LIKE '%${lowercaseKey}%' `;
+                countQuery += ` AND LOWER(t.test_name) LIKE '%${lowercaseKey}%' `;
+            }
+        }
+        if (student_id) {
+            getquestionnaireQuery += ` AND s.student_id = ${student_id} AND DATE(t.test_date) = '${todayDate}'`;
+            countQuery += ` AND s.student_id = ${student_id} AND DATE(t.test_date) = '${todayDate}'`;
+        }
+        
+        getquestionnaireQuery += " ORDER BY q.cts DESC";
+    
+        // Apply pagination if both page and perPage are provided
+        let total = 0;
+        if (page && perPage) {
+            const totalResult = await connection.query(countQuery);
+            total = parseInt(totalResult[0][0].total);
+
+            const start = (page - 1) * perPage;
+            getquestionnaireQuery += ` LIMIT ${perPage} OFFSET ${start}`;
+        }
+
+        const result = await connection.query(getquestionnaireQuery);
+        const questionnaire = result[0];
+    
+        // Commit the transaction
+        await connection.commit();
+        const data = {
+            status: 200,
+            message: "questionnaire retrieved successfully",
+            data: questionnaire,
+        };
+        // Add pagination information if provided
+        if (page && perPage) {
+            data.pagination = {
+                per_page: perPage,
+                total: total,
+                current_page: page,
+                last_page: Math.ceil(total / perPage),
+            };
+        }
+
+        return res.status(200).json(data);
+    } catch (error) {
+        console.log(error);
+        
         return error500(error, res);
     } finally {
         if (connection) connection.release()
@@ -670,7 +755,7 @@ const createAnswer = async (req, res)=>{
         // let selected_answer = isFooterResult[0][0].option || null;
         let selected_answer = isFooterResult[0]?.[0]?.option || null;
         // ✅ Compare Answers
-        let result_status = (correct_answer === selected_answer) ? "pass" : "fail";
+        let result_status = (correct_answer === selected_answer) ? "correct" : "wrong";
     
         let marks = 0
         if (correct_answer === selected_answer) {
