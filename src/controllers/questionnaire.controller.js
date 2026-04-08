@@ -854,6 +854,8 @@ const getAllAnswer = async (req, res) => {
         const answers = result[0];
         for (let i = 0; i < answers.length; i++) {
             const element = answers[i];
+            console.log(element);
+            
             let getAnswerFooterQuery = `SELECT qaf.*, qh.question,qf.option AS student_select_ans FROM questionnaire_answers_footer qaf
             LEFT JOIN questionnaire_header qh ON qh.questionnaire_header_id = qaf.questionnaire_header_id
             LEFT JOIN questionnaire_footer qf ON qf.questionnaire_footer_id = qaf.questionnaire_footer_id
@@ -995,8 +997,8 @@ const getResult = async (req, res) => {
             t.total_marks,
 
             COUNT(qaf.answer_id) AS attempted_questions,
-            SUM(CASE WHEN qaf.is_correct = 1 THEN 1 ELSE 0 END) AS correct_questions,
-            SUM(CASE WHEN qaf.is_correct = 0 THEN 1 ELSE 0 END) AS wrong_questions,
+            SUM(CASE WHEN qaf.result_status = 'correct' THEN 1 ELSE 0 END) AS correct_questions,
+            SUM(CASE WHEN qaf.result_status = 'wrong' THEN 1 ELSE 0 END) AS wrong_questions,
 
             SUM(CASE WHEN qaf.is_correct = 1 THEN qaf.marks ELSE 0 END) AS correct_marks
 
