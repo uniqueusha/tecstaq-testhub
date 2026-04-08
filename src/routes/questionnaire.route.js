@@ -11,6 +11,8 @@ router.post('/answer', questionnaireController.createAnswer);
 router.get('/', questionnaireController.getAllQuestionnaire);
 //active list  
 router.get('/wma', questionnaireController.getQuestionnaireWma);
+//result
+router.get('/result', questionnaireController.getResult);
 //get student wise test list
 router.get('/student-test', questionnaireController.getStudentTestQuestionnaire);
 //get answer list
