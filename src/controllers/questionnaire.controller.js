@@ -431,9 +431,10 @@ const getAllQuestionnaireStudent = async (req, res) => {
         if (connection) connection.release()
     }
 } 
+
 const getAllQuestionnaire = async (req, res) => {
     const { page, perPage, key, student_id } = req.query;
-     const newDate = new Date(); // Current timestamp
+    const newDate = new Date(); // Current timestamp
     const todayDate = newDate.toISOString().split('T')[0];
     // const todayDate = newDate.toLocaleDateString('en-CA');
     
@@ -445,20 +446,33 @@ const getAllQuestionnaire = async (req, res) => {
         //start a transaction
         await connection.beginTransaction();
 
-        let getquestionnaireQuery = `SELECT q.test_id, q.questionnaire_id, g.group_name, s.student_id, t.test_name, t.test_date, t.duration, t.total_marks, t.start_time, t.end_time,q.cts, COUNT(qh.questionnaire_header_id) AS total_questions FROM  questionnaire q
-        LEFT JOIN tests t ON t.test_id = q.test_id
-        LEFT JOIN student_registration s ON q.test_id = s.test_id
-        LEFT JOIN groups g ON g.group_id = t.group_id
-        LEFT JOIN questionnaire_header qh ON qh.questionnaire_id = q.questionnaire_id
-
+        let getquestionnaireQuery = `SELECT 
+    q.test_id, 
+    q.questionnaire_id, 
+    g.group_name, 
+    s.student_id, 
+    t.test_name, 
+    t.test_date, 
+    t.duration, 
+    t.total_marks, 
+    t.start_time, 
+    t.end_time,
+    q.cts,
+    (
+        SELECT COUNT(*) 
+        FROM questionnaire_header qh 
+        WHERE qh.questionnaire_id = q.questionnaire_id
+    ) AS total_questions
+FROM questionnaire q
+LEFT JOIN tests t ON t.test_id = q.test_id
+LEFT JOIN student_registration s ON q.test_id = s.test_id
+LEFT JOIN groups g ON g.group_id = t.group_id
         WHERE 1`;
 
         let countQuery = `SELECT COUNT(*) AS total FROM questionnaire q
         LEFT JOIN tests t ON t.test_id = q.test_id
-        LEFT JOIN student_registration s ON q.test_id = s.test_id
-        LEFT JOIN groups g ON g.group_id = t.group_id
-                LEFT JOIN questionnaire_header qh ON qh.questionnaire_id = q.questionnaire_id
-
+LEFT JOIN student_registration s ON q.test_id = s.test_id
+LEFT JOIN groups g ON g.group_id = t.group_id
         WHERE 1`;
 
         if (key) {
@@ -833,6 +847,98 @@ const getAllAnswer = async (req, res) => {
         }
 
         const result = await connection.query(getAnswerQuery);
+        const answers = result[0];
+        for (let i = 0; i < answers.length; i++) {
+            const element = answers[i];
+            let getAnswerFooterQuery = `SELECT qaf.*, qh.question,qf.option AS student_select_ans FROM questionnaire_answers_footer qaf
+            LEFT JOIN questionnaire_header qh ON qh.questionnaire_header_id = qaf.questionnaire_header_id
+            LEFT JOIN questionnaire_footer qf ON qf.questionnaire_footer_id = qaf.questionnaire_footer_id
+            WHERE qh.questionnaire_id = ${element.answer_id} AND qaf.status = 1`;
+
+            getAnswerFooterQuery += ` ORDER BY qaf.cts DESC`;
+
+            const answerFooterResult = await connection.query(getAnswerFooterQuery);
+            answers[i]['answer'] = answerFooterResult[0];
+        }
+    
+        // Commit the transaction
+        await connection.commit();
+        const data = {
+            status: 200,
+            message: "Answer retrieved successfully",
+            data: answers,
+        };
+        // Add pagination information if provided
+        if (page && perPage) {
+            data.pagination = {
+                per_page: perPage,
+                total: total,
+                current_page: page,
+                last_page: Math.ceil(total / perPage),
+            };
+        }
+
+        return res.status(200).json(data);
+    } catch (error) {
+        console.log(error);
+        
+        return error500(error, res);
+    } finally {
+        if (connection) connection.release()
+    }
+} 
+
+//result
+const getResult = async (req, res) => {
+    const { page, perPage, key, student_id } = req.query;
+    
+    // attempt to obtain a database connection
+    let connection = await getConnection();
+
+    try {
+
+        //start a transaction
+        await connection.beginTransaction();
+
+        let getResultQuery = `SELECT qa.*,u.user_name FROM questionnaire_answers qa
+        LEFT JOIN users u ON u.student_id = qa.student_id
+        WHERE 1`;
+
+        let countQuery = `SELECT COUNT(*) AS total FROM questionnaire_answers qa
+        LEFT JOIN users u ON u.student_id = qa.student_id
+        WHERE 1`;
+
+        if (key) {
+            const lowercaseKey = key.toLowerCase().trim();
+            if (lowercaseKey === "activated") {
+                getResultQuery += ` AND qa.status = 1`;
+                countQuery += ` AND qa.status = 1`;
+            } else if (lowercaseKey === "deactivated") {
+                getResultQuery += ` AND qa.status = 0`;
+                countQuery += ` AND qa.status = 0`;
+            } else {
+                getResultQuery += ` AND LOWER(u.user_name) LIKE '%${lowercaseKey}%' `;
+                countQuery += ` AND LOWER(u.user_name) LIKE '%${lowercaseKey}%' `;
+            }
+        }
+        if (student_id) {
+            getResultQuery += ` AND qa.student_id = ${student_id}`;
+            countQuery += ` AND qa.student_id = ${student_id}`;
+        }
+        
+        getResultQuery += " ORDER BY qa.cts DESC";
+    
+        // Apply pagination if both page and perPage are provided
+        let total = 0;
+        if (page && perPage) {
+            const totalResult = await connection.query(countQuery);
+            total = parseInt(totalResult[0][0].total);
+
+            const start = (page - 1) * perPage;
+            getResultQuery += ` LIMIT ${perPage} OFFSET ${start}`;
+        }
+
+        const result = await connection.query(getResultQuery);
         const answers = result[0];
         for (let i = 0; i < answers.length; i++) {
             const element = answers[i];
