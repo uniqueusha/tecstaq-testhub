@@ -1,23 +1,23 @@
 const pool = require("../../db");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
-//const nodemailer = require("nodemailer");
-//const xlsx = require("xlsx");
+const nodemailer = require("nodemailer");
+const xlsx = require("xlsx");
 const fs = require("fs");
 const path = require('path');
 
-// const transporter = nodemailer.createTransport({
-//     host: "smtp-mail.outlook.com",
-//     port: 587,
-//     secure: false,
-//     auth: {
-//         user: "support@tecstaq.com",
-//         pass: "Homeoffice@2025#$",
-//     },
-//     tls: {
-//         rejectUnauthorized: false,
-//     },
-//  });
+const transporter = nodemailer.createTransport({
+    host: "smtp-mail.outlook.com",
+    port: 587,
+    secure: false,
+    auth: {
+        user: "support@tecstaq.com",
+        pass: "HelpMe@1212#$",
+    },
+    tls: {
+        rejectUnauthorized: false,
+    },
+ });
 
 // Function to obtain a database connection
 const getConnection = async () => {
@@ -107,12 +107,57 @@ const createUser = async (req, res) => {
         const insertUntitledValues = [user_id, hash];
         const untitledResult = await connection.query(insertUntitledQuery, insertUntitledValues)
 
+        
+        const message = `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <title>Welcome to test</title>
+          <style>
+              div{
+              font-family: Arial, sans-serif; 
+               margin: 0px;
+                padding: 0px;
+                color:black;
+              }
+          </style>
+        </head>
+        <body>
+        <div>
+        <h2 style="text-transform: capitalize;">Hi ${user_name},</h2>
+        <h3>Welcome to Tecstaq!</h3>
+
+        <p>Your account has been successfully created. Here are your login details:</p>
+        <p>Email: ${email_id}</p>
+        <p>Temporary Password: ${password}</P>
+        <p>You can log in using the following link:
+          <a href="https://tecstaq.testhub.com/">https://tecstaq.testhub.com/</a></p>
+          <p>For security reasons, please change your password after your first login.</p>
+          <p>If you didn’t request this account or believe this was created in error, please contact our support team at support@tecstaq.com.</p>
+          <p>Thank you,</p>
+          <p><strong>Tecstaq Testhub</strong></p>
+
+        </div>
+        </body>
+        </html>`;
+        // Prepare the email message options.
+        const mailOptions = {
+            from: "support@tecstaq.com", // Sender address from environment variables.
+            to: `${email_id}`, // Recipient's name and email address."sushantsjamdade@gmail.com",
+            // bcc: ["sushantsjamdade@gmail.com"],
+            subject: "Welcome to Tecstaq Testhub! Your Account Has Been Created", // Subject line.
+            html: message,
+        };
         //commit the transation
         await connection.commit();
+        
+        await transporter.sendMail(mailOptions);
         return res.status(200).json({
         status: 200,
-        message: `User created successfully.`,
-        });
+        message: `Student created successfully.`,
+      });
+
     } catch (error) {
         await connection.rollback();
         return error500(error, res);
@@ -120,6 +165,7 @@ const createUser = async (req, res) => {
         await connection.release();
     }
 };
+
   
 //login
 const login = async (req, res) => {
@@ -135,6 +181,33 @@ const login = async (req, res) => {
   try {
     //Start the transaction
     await connection.beginTransaction();
+    // ✅ Get student data
+        const studentQuery = `
+            SELECT * FROM student_registration 
+            WHERE TRIM(LOWER(email_id)) = ?
+        `;
+        const [studentResult] = await connection.query(studentQuery, [email_id.toLowerCase()]);
+        const student = studentResult[0];
+
+        if (!student) {
+            return error422("Student not found.", res);
+        }
+
+        const student_id = student.student_id;
+        const test_id = student.test_id;
+
+        // ✅ Check if already attempted test
+        const checkAttemptQuery = `
+            SELECT * FROM questionnaire_answers 
+            WHERE student_id = ? AND test_id = ?
+        `;
+        const [attemptResult] = await connection.query(checkAttemptQuery, [student_id, test_id]);
+
+        if (attemptResult.length > 0) {
+            return error422("You have already attempted this test.", res);
+        }
+
+
     //check email id is exist
     const query = `SELECT u.* FROM users u
     WHERE TRIM(LOWER(u.email_id)) = ? AND u.status = 1`;

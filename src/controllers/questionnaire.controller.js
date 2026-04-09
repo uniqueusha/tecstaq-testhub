@@ -730,6 +730,7 @@ const getStudentTestQuestionnaire = async (req, res) => {
 //add answer
 const createAnswer = async (req, res) => {
     const student_id = req.body.student_id ? req.body.student_id : '';
+    const test_id = req.body.test_id ? req.body.test_id :'';
     const answer = req.body.answer ? req.body.answer : [];
     if (!student_id) {
         return error422("Student id is required.", res);
@@ -746,8 +747,8 @@ const createAnswer = async (req, res) => {
     try {
         // start the transaction
         await connection.beginTransaction();
-        const insertAnswerQuery = "INSERT INTO questionnaire_answers ( student_id ) VALUES ( ? )";
-        const answerResult = await connection.query(insertAnswerQuery, [student_id]);
+        const insertAnswerQuery = "INSERT INTO questionnaire_answers ( student_id, test_id ) VALUES ( ? )";
+        const answerResult = await connection.query(insertAnswerQuery, [student_id, test_id]);
         const answer_id = answerResult[0].insertId;
 
         let answerArray = answer;
