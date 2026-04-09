@@ -5,7 +5,6 @@ const nodemailer = require("nodemailer");
 //const xlsx = require("xlsx");
 const fs = require("fs");
 const path = require('path');
-const { DATE } = require("mysql/lib/protocol/constants/types");
 
 const transporter = nodemailer.createTransport({
     host: "smtp-mail.outlook.com",
@@ -221,7 +220,6 @@ const login = async (req, res) => {
         
         const testEndDateTime = end_time ? new Date(`${test_date} ${end_time}`) : null;
         
-
         const allowedLoginTime = new Date(testStartDateTime.getTime() - 10 * 60 * 1000);
         const currentTime = new Date();
 
@@ -232,17 +230,16 @@ const login = async (req, res) => {
             return error422("Test time is over.", res);
         }
 
+        //check email id is exist
+        const query = `SELECT u.* FROM users u
+        WHERE TRIM(LOWER(u.email_id)) = ? AND u.status = 1`;
+        const result = await connection.query(query, [email_id.toLowerCase()]);
+        const check_user = result[0][0];
+        if (!check_user) {
+            return error422("Authentication failed.", res);
+        }
 
-    //check email id is exist
-    const query = `SELECT u.* FROM users u
-    WHERE TRIM(LOWER(u.email_id)) = ? AND u.status = 1`;
-    const result = await connection.query(query, [email_id.toLowerCase()]);
-    const check_user = result[0][0];
-    if (!check_user) {
-        return error422("Authentication failed.", res);
-    }
-
-// Check if the user with the provided Untitled id exists
+        // Check if the user with the provided Untitled id exists
         const checkUserUntitledQuery = "SELECT * FROM untitled WHERE user_id = ?";
         const [checkUserUntitledResult] = await connection.query(checkUserUntitledQuery, [check_user.user_id]);
         const user_untitled = checkUserUntitledResult[0];
