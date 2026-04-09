@@ -5,6 +5,7 @@ const nodemailer = require("nodemailer");
 //const xlsx = require("xlsx");
 const fs = require("fs");
 const path = require('path');
+const { DATE } = require("mysql/lib/protocol/constants/types");
 
 const transporter = nodemailer.createTransport({
     host: "smtp-mail.outlook.com",
@@ -195,7 +196,7 @@ const login = async (req, res) => {
 
         const student_id = student.student_id;
         const test_id = student.test_id;
-
+        
         // ✅ Check if already attempted test
         const checkAttemptQuery = `
             SELECT * FROM questionnaire_answers 
@@ -207,12 +208,30 @@ const login = async (req, res) => {
             return error422("You have already attempted this Test.", res);
         }
 
-        const loginQuery = `SELECT * FROM tests WHERE test_id = ?`;
-        const loginValue = await connection.query(loginQuery, [test_id]);
-        const start_date = loginValue[0].start_date;
-        const test_date = loginValue[0].test_date;
+        // ✅ 3. Get test details
+        const testQuery = `SELECT DATE_FORMAT(test_date, '%Y-%m-%d') AS test_date, start_time, end_time FROM tests WHERE test_id = ?`;
+        const testResult = await connection.query(testQuery, [test_id]);
+        const test_date = testResult[0][0].test_date;              
+        const start_time = testResult[0][0].start_time;
+        
+        const end_time = testResult[0][0].end_time; 
 
-        //login before 10 min 
+        // ✅ 4. Time validation (10 min before)
+        const testStartDateTime = new Date(`${test_date} ${start_time}`);
+        
+        const testEndDateTime = end_time ? new Date(`${test_date} ${end_time}`) : null;
+        
+
+        const allowedLoginTime = new Date(testStartDateTime.getTime() - 10 * 60 * 1000);
+        const currentTime = new Date();
+
+        if (currentTime < allowedLoginTime) {
+            return error422("You can login only 10 minutes before the test start time.", res);
+        }
+        if (testEndDateTime && currentTime > testEndDateTime) {
+            return error422("Test time is over.", res);
+        }
+
 
     //check email id is exist
     const query = `SELECT u.* FROM users u
@@ -239,7 +258,9 @@ const login = async (req, res) => {
         const token = jwt.sign(
             {
                 user_id: user_untitled.user_id,
-                email_id: check_user.email_id,
+                email_id: check_user.email_id
+                // student_id: student_id,
+                // test_id: test_id
             },
             "secret_this_should_be", // Use environment variable for secret key
             { expiresIn: "1h" }
@@ -266,6 +287,7 @@ const login = async (req, res) => {
         await connection.release();
     }
 };
+
 
 // get User list...
 const getUsers = async (req, res) => {
