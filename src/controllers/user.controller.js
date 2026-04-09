@@ -2,7 +2,7 @@ const pool = require("../../db");
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const nodemailer = require("nodemailer");
-const xlsx = require("xlsx");
+//const xlsx = require("xlsx");
 const fs = require("fs");
 const path = require('path');
 
@@ -207,6 +207,10 @@ const login = async (req, res) => {
             return error422("You have already attempted this test.", res);
         }
 
+        const loginQuery = `SELECT * FROM tests WHERE test_id = ?`;
+        const loginValue = await connection.query(loginQuery, [test_id]);
+        const start_date = loginValue[0].start_date;
+        const test_date = loginValue[0].test_date;
 
     //check email id is exist
     const query = `SELECT u.* FROM users u

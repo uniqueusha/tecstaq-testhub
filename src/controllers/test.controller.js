@@ -188,7 +188,7 @@ const onStatusChange = async (req, res) => {
 
 //all Test list
 const getAllTest = async (req, res) => {
-    const { page, perPage, key } = req.query;
+    const { page, perPage, key, group_id, fromDate, toDate } = req.query;
 
     // attempt to obtain a database connection
     let connection = await getConnection();
@@ -218,6 +218,14 @@ const getAllTest = async (req, res) => {
                 getTestQuery += ` AND LOWER(t.test_name) LIKE '%${lowercaseKey}%' `;
                 countQuery += ` AND LOWER(t.test_name) LIKE '%${lowercaseKey}%' `;
             }
+        }
+        if (fromDate && toDate) {
+            getTestQuery += ` AND DATE(t.cts) BETWEEN '${fromDate}' AND '${toDate}'`;
+            countQuery += ` AND DATE(t.cts) BETWEEN '${fromDate}' AND '${toDate}'`;
+        }
+        if (group_id){
+            getTestQuery += ` AND t.group_id = ${group_id}`;
+            countQuery += ` AND t.group_id = ${group_id}`;
         }
         getTestQuery += " ORDER BY t.cts DESC";
 
