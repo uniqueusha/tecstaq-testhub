@@ -181,6 +181,16 @@ const login = async (req, res) => {
   try {
     //Start the transaction
     await connection.beginTransaction();
+    //check email id is exist
+    const query = `SELECT u.* FROM users u
+    WHERE TRIM(LOWER(u.email_id)) = ? AND u.status = 1`;
+    const result = await connection.query(query, [email_id.toLowerCase()]);
+    const check_user = result[0][0];
+    if (!check_user) {
+        return error422("Authentication failed.", res);
+    }
+    if (check_user.role === 'student') {
+
     // ✅ Get student data
         const studentQuery = `
             SELECT * FROM student_registration 
@@ -188,12 +198,14 @@ const login = async (req, res) => {
         `;
         const [studentResult] = await connection.query(studentQuery, [email_id.toLowerCase()]);
         const student = studentResult[0];
+        //   const studentQuery = `
+        //     SELECT u.*, sr.test_id FROM users u
+        //     LEFT JOIN student_registration sr ON sr.student_id = u.student_id
+        //     WHERE TRIM(LOWER(sr.email_id)) = ? AND u.status = 1 AND u.role != 'admin'
+        // `;
+       
 
-        if (!student) {
-            return error422("Student not found.", res);
-        }
-
-        const student_id = student.student_id;
+        const student_id = student.student_id ;
         const test_id = student.test_id;
         
         // ✅ Check if already attempted test
@@ -229,15 +241,7 @@ const login = async (req, res) => {
         if (testEndDateTime && currentTime > testEndDateTime) {
             return error422("Test time is over.", res);
         }
-
-        //check email id is exist
-        const query = `SELECT u.* FROM users u
-        WHERE TRIM(LOWER(u.email_id)) = ? AND u.status = 1`;
-        const result = await connection.query(query, [email_id.toLowerCase()]);
-        const check_user = result[0][0];
-        if (!check_user) {
-            return error422("Authentication failed.", res);
-        }
+    }
 
         // Check if the user with the provided Untitled id exists
         const checkUserUntitledQuery = "SELECT * FROM untitled WHERE user_id = ?";
@@ -256,8 +260,7 @@ const login = async (req, res) => {
             {
                 user_id: user_untitled.user_id,
                 email_id: check_user.email_id
-                // student_id: student_id,
-                // test_id: test_id
+        
             },
             "secret_this_should_be", // Use environment variable for secret key
             { expiresIn: "1h" }
