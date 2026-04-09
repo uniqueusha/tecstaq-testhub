@@ -99,8 +99,6 @@ const createStudent = async (req, res)=>{
             message:"Student created successfully."
         })
     } catch (error) {
-        console.log(error);
-        
         if (connection) connection.rollback();
         return error500(error, res);
     } finally{

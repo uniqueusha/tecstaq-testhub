@@ -204,13 +204,15 @@ const login = async (req, res) => {
         const [attemptResult] = await connection.query(checkAttemptQuery, [student_id, test_id]);
 
         if (attemptResult.length > 0) {
-            return error422("You have already attempted this test.", res);
+            return error422("You have already attempted this Test.", res);
         }
 
         const loginQuery = `SELECT * FROM tests WHERE test_id = ?`;
         const loginValue = await connection.query(loginQuery, [test_id]);
         const start_date = loginValue[0].start_date;
         const test_date = loginValue[0].test_date;
+
+        //login before 10 min 
 
     //check email id is exist
     const query = `SELECT u.* FROM users u
@@ -257,6 +259,8 @@ const login = async (req, res) => {
         });
 
     } catch (error) {
+        console.log(error);
+        
         return error500(error, res)
     } finally {
         await connection.release();

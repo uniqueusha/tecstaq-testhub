@@ -167,7 +167,6 @@ const onStatusChange = async (req, res) => {
             message: `Group ${statusMessage} successfully.`,
         });
     } catch (error) {
-        console.log(error);
         return error500(error, res);
     } finally {
         if (connection) connection.release()

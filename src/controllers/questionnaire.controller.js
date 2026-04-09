@@ -433,7 +433,7 @@ const getAllQuestionnaireStudent = async (req, res) => {
 }
 
 const getAllQuestionnaire = async (req, res) => {
-    const { page, perPage, key, student_id } = req.query;
+    const { page, perPage, key, student_id, group_id } = req.query;
     const newDate = new Date(); // Current timestamp
     const todayDate = newDate.toISOString().split('T')[0];
     // const todayDate = newDate.toLocaleDateString('en-CA');
@@ -449,6 +449,7 @@ const getAllQuestionnaire = async (req, res) => {
         let getquestionnaireQuery = `SELECT 
     q.test_id, 
     q.questionnaire_id, 
+    g.group_id,
     g.group_name, 
     s.student_id, 
     t.test_name, 
@@ -492,6 +493,10 @@ LEFT JOIN groups g ON g.group_id = t.group_id
             getquestionnaireQuery += ` AND s.student_id = ${student_id} AND DATE(t.test_date) = '${todayDate}'`;
             countQuery += ` AND s.student_id = ${student_id} AND DATE(t.test_date) = '${todayDate}'`;
         }
+        if (group_id) {
+            getquestionnaireQuery += ` AND g.group_id = ${group_id}`
+            countQuery += ` AND g.group_id = ${group_id}`;
+        }
 
         getquestionnaireQuery += " ORDER BY q.cts DESC";
 
@@ -527,8 +532,6 @@ LEFT JOIN groups g ON g.group_id = t.group_id
 
         return res.status(200).json(data);
     } catch (error) {
-        console.log(error);
-
         return error500(error, res);
     } finally {
         if (connection) connection.release()
@@ -855,7 +858,6 @@ const getAllAnswer = async (req, res) => {
         const answers = result[0];
         for (let i = 0; i < answers.length; i++) {
             const element = answers[i];
-            console.log(element);
             
             let getAnswerFooterQuery = `SELECT qaf.*, qh.question,qf.option AS student_select_ans FROM questionnaire_answers_footer qaf
             LEFT JOIN questionnaire_header qh ON qh.questionnaire_header_id = qaf.questionnaire_header_id
@@ -887,8 +889,6 @@ const getAllAnswer = async (req, res) => {
 
         return res.status(200).json(data);
     } catch (error) {
-        console.log(error);
-
         return error500(error, res);
     } finally {
         if (connection) connection.release()
@@ -973,8 +973,6 @@ const getResultold = async (req, res) => {
 
         return res.status(200).json(data);
     } catch (error) {
-        console.log(error);
-
         return error500(error, res);
     } finally {
         if (connection) connection.release()
@@ -1040,7 +1038,6 @@ const getResult = async (req, res) => {
         });
 
     } catch (error) {
-        console.log(error);
         await connection.rollback();
         return error500(error, res);
     } finally {
