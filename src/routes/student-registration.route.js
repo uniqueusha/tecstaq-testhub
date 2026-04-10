@@ -5,12 +5,12 @@ const studentController = require('../controllers/student-registration.controlle
 const checkAuth = require('../middleware/check.auth')
 
 router.post('/', studentController.createStudent);
+//multiple student upload
+router.post('/student-upload', studentController.uploadStudentExcel);
 //all list
 router.get('/', studentController.getAllStudent);
 //active list  
 router.get('/wma', studentController.getStudentsWma);
-//multiple student upload
-router.get('/student-upload', studentController.uploadStudentExcel);
 //get list by id
 router.get('/:id', studentController.getStudent);
 // update priority

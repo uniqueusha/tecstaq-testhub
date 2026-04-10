@@ -539,11 +539,13 @@ const studentGroupApprove = async (req, res) => {
     }
 };
 
+
+
 const uploadStudentExcel = async (req, res) => {
-    const file = req.file; // using multer
+    const { file } = req.body; // base64 string
 
     if (!file) {
-        return res.status(400).json({ message: "Excel file required" });
+        return res.status(400).json({ message: "Base64 file required" });
     }
 
     let connection = await getConnection();
@@ -551,65 +553,86 @@ const uploadStudentExcel = async (req, res) => {
     try {
         await connection.beginTransaction();
 
-        // Read Excel
-        const workbook = xlsx.readFile(file.path);
+        // Convert Base64 → Buffer
+        const buffer = Buffer.from(file, "base64");
+
+        // Read Excel from buffer
+        const workbook = xlsx.read(buffer, { type: "buffer" });
         const sheetName = workbook.SheetNames[0];
-        const sheetData = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
+        const sheet = workbook.Sheets[sheetName];
+
+        const sheetData = xlsx.utils.sheet_to_json(sheet);
 
         for (let row of sheetData) {
 
-            const {
-                group_id,
-                test_id,
-                student_name,
-                email_id,
-                phone_number,
-                gender,
-                college_name,
-                course,
-                course_year,
-                role
-            } = row;
+            // Skip empty rows
+            if (!row.student_name && !row.email_id) continue;
 
-            // validation
+            // Get values safely
+            const group_id = row.group_id || "";
+            const test_id = row.test_id || "";
+            const student_name = row.student_name?.toString().trim();
+            const email_id = row.email_id?.toString().trim();
+            const phone_number = row.phone_number?.toString();
+            const gender = row.gender || "";
+            const college_name = row.college_name?.toString().trim();
+            const course = row.course?.toString().trim();
+            const course_year = row.course_year || "";
+            const role = row.role || "";
+
+            // Validation
             if (!student_name || !email_id || !phone_number || !course_year || !role) {
-                throw new Error(`Missing required fields for ${student_name}`);
+                throw new Error(`Missing required fields for ${student_name || "row"}`);
             }
 
-            // check group exists
-            const [groupCheck] = await connection.query(
-                "SELECT * FROM groups WHERE group_id = ?",
-                [group_id]
-            );
-
-            if (groupCheck.length === 0) {
-                throw new Error(`Group not found for group_id: ${group_id}`);
-            }
-
-            // insert student
+            // Check if group exists
+        const isGroupExist = "SELECT * FROM groups WHERE group_id  = ?";
+        const isGroupResult = await pool.query(isGroupExist,[group_id]);
+        if (isGroupResult[0].length == 0) {
+            return error422("Group not found.", res);
+        }
+            // Insert into student_registration
             const [studentResult] = await connection.query(
                 `INSERT INTO student_registration 
                 (group_id, test_id, student_name, email_id, phone_number, gender, college_name, course, course_year, role)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                [group_id, test_id, student_name, email_id, phone_number, gender, college_name, course, course_year, role]
+                [
+                    group_id,
+                    test_id,
+                    student_name,
+                    email_id,
+                    phone_number,
+                    gender,
+                    college_name,
+                    course,
+                    course_year,
+                    role
+                ]
             );
 
             const student_id = studentResult.insertId;
 
-            // insert user
+            // Insert into users
             const [userResult] = await connection.query(
                 `INSERT INTO users 
                 (user_name, email_id, mobile_number, role, group_id, student_id)
                 VALUES (?, ?, ?, ?, ?, ?)`,
-                [student_name, email_id, phone_number, role, group_id, student_id]
+                [
+                    student_name,
+                    email_id,
+                    phone_number,
+                    role,
+                    group_id,
+                    student_id
+                ]
             );
 
             const user_id = userResult.insertId;
 
-            // password hash
+            // ✅ Hash password
             const hash = await bcrypt.hash("123456", 10);
 
-            // insert password
+            // ✅ Insert into untitled (password table)
             await connection.query(
                 `INSERT INTO untitled (user_id, extenstions) VALUES (?, ?)`,
                 [user_id, hash]
@@ -620,14 +643,16 @@ const uploadStudentExcel = async (req, res) => {
 
         return res.status(200).json({
             status: 200,
-            message: "Excel data uploaded successfully"
+            message: "Excel uploaded and data inserted successfully"
         });
-
+        
     } catch (error) {
+        console.log(error);
+        
         if (connection) await connection.rollback();
-        return res.status(500).json({ error: error.message });
+        return error500(error, res);
     } finally {
-        if (connection) connection.release();
+        if (connection) connection.release()
     }
 };
 
