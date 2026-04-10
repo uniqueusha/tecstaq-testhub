@@ -858,11 +858,11 @@ const getAllAnswer = async (req, res) => {
         const answers = result[0];
         for (let i = 0; i < answers.length; i++) {
             const element = answers[i];
-            
+           
             let getAnswerFooterQuery = `SELECT qaf.*, qh.question,qf.option AS student_select_ans FROM questionnaire_answers_footer qaf
             LEFT JOIN questionnaire_header qh ON qh.questionnaire_header_id = qaf.questionnaire_header_id
             LEFT JOIN questionnaire_footer qf ON qf.questionnaire_footer_id = qaf.questionnaire_footer_id
-            WHERE qh.questionnaire_id = ${element.answer_id} AND qaf.status = 1`;
+            WHERE qaf.answer_id = ${element.answer_id} AND qaf.status = 1`;
 
             getAnswerFooterQuery += ` ORDER BY qaf.cts DESC`;
 
