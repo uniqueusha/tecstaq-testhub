@@ -750,7 +750,7 @@ const createAnswer = async (req, res) => {
     try {
         // start the transaction
         await connection.beginTransaction();
-        const insertAnswerQuery = "INSERT INTO questionnaire_answers ( student_id, test_id ) VALUES ( ? )";
+        const insertAnswerQuery = "INSERT INTO questionnaire_answers ( student_id, test_id ) VALUES ( ? , ?)";
         const answerResult = await connection.query(insertAnswerQuery, [student_id, test_id]);
         const answer_id = answerResult[0].insertId;
 

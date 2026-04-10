@@ -191,24 +191,18 @@ const login = async (req, res) => {
     }
     if (check_user.role === 'student') {
 
-    // ✅ Get student data
+    //Get student data
         const studentQuery = `
             SELECT * FROM student_registration 
             WHERE TRIM(LOWER(email_id)) = ?
         `;
         const [studentResult] = await connection.query(studentQuery, [email_id.toLowerCase()]);
         const student = studentResult[0];
-        //   const studentQuery = `
-        //     SELECT u.*, sr.test_id FROM users u
-        //     LEFT JOIN student_registration sr ON sr.student_id = u.student_id
-        //     WHERE TRIM(LOWER(sr.email_id)) = ? AND u.status = 1 AND u.role != 'admin'
-        // `;
        
-
         const student_id = student.student_id ;
         const test_id = student.test_id;
         
-        // ✅ Check if already attempted test
+        //Check if already attempted test
         const checkAttemptQuery = `
             SELECT * FROM questionnaire_answers 
             WHERE student_id = ? AND test_id = ?
@@ -219,7 +213,7 @@ const login = async (req, res) => {
             return error422("You have already attempted this Test.", res);
         }
 
-        // ✅ 3. Get test details
+        //Get test details
         const testQuery = `SELECT DATE_FORMAT(test_date, '%Y-%m-%d') AS test_date, start_time, end_time FROM tests WHERE test_id = ?`;
         const testResult = await connection.query(testQuery, [test_id]);
         const test_date = testResult[0][0].test_date;              
@@ -227,7 +221,7 @@ const login = async (req, res) => {
         
         const end_time = testResult[0][0].end_time; 
 
-        // ✅ 4. Time validation (10 min before)
+        // Time validation (10 min before)
         const testStartDateTime = new Date(`${test_date} ${start_time}`);
         
         const testEndDateTime = end_time ? new Date(`${test_date} ${end_time}`) : null;
@@ -280,8 +274,6 @@ const login = async (req, res) => {
         });
 
     } catch (error) {
-        console.log(error);
-        
         return error500(error, res)
     } finally {
         await connection.release();
