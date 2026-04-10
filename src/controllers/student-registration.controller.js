@@ -1,7 +1,7 @@
 
 const pool = require("../../db");
 const bcrypt = require("bcrypt");
-//const xlsx = require("xlsx");
+const xlsx = require("xlsx");
 //const fs = require("fs");
 //const path = require('path');
 
@@ -539,6 +539,100 @@ const studentGroupApprove = async (req, res) => {
     }
 };
 
+const uploadStudentExcel = async (req, res) => {
+    const file = req.file; // using multer
+
+    if (!file) {
+        return res.status(400).json({ message: "Excel file required" });
+    }
+
+    let connection = await getConnection();
+
+    try {
+        await connection.beginTransaction();
+
+        // Read Excel
+        const workbook = xlsx.readFile(file.path);
+        const sheetName = workbook.SheetNames[0];
+        const sheetData = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
+
+        for (let row of sheetData) {
+
+            const {
+                group_id,
+                test_id,
+                student_name,
+                email_id,
+                phone_number,
+                gender,
+                college_name,
+                course,
+                course_year,
+                role
+            } = row;
+
+            // validation
+            if (!student_name || !email_id || !phone_number || !course_year || !role) {
+                throw new Error(`Missing required fields for ${student_name}`);
+            }
+
+            // check group exists
+            const [groupCheck] = await connection.query(
+                "SELECT * FROM groups WHERE group_id = ?",
+                [group_id]
+            );
+
+            if (groupCheck.length === 0) {
+                throw new Error(`Group not found for group_id: ${group_id}`);
+            }
+
+            // insert student
+            const [studentResult] = await connection.query(
+                `INSERT INTO student_registration 
+                (group_id, test_id, student_name, email_id, phone_number, gender, college_name, course, course_year, role)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [group_id, test_id, student_name, email_id, phone_number, gender, college_name, course, course_year, role]
+            );
+
+            const student_id = studentResult.insertId;
+
+            // insert user
+            const [userResult] = await connection.query(
+                `INSERT INTO users 
+                (user_name, email_id, mobile_number, role, group_id, student_id)
+                VALUES (?, ?, ?, ?, ?, ?)`,
+                [student_name, email_id, phone_number, role, group_id, student_id]
+            );
+
+            const user_id = userResult.insertId;
+
+            // password hash
+            const hash = await bcrypt.hash("123456", 10);
+
+            // insert password
+            await connection.query(
+                `INSERT INTO untitled (user_id, extenstions) VALUES (?, ?)`,
+                [user_id, hash]
+            );
+        }
+
+        await connection.commit();
+
+        return res.status(200).json({
+            status: 200,
+            message: "Excel data uploaded successfully"
+        });
+
+    } catch (error) {
+        if (connection) await connection.rollback();
+        return res.status(500).json({ error: error.message });
+    } finally {
+        if (connection) connection.release();
+    }
+};
+
+
+
 module.exports = {
     createStudent,
     getAllStudent,
@@ -547,5 +641,6 @@ module.exports = {
     onStatusChange,
     getStudent,
     studentApprove,
-    studentGroupApprove  
+    studentGroupApprove ,
+    uploadStudentExcel 
 }

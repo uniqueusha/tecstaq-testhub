@@ -9,7 +9,8 @@ router.post('/', studentController.createStudent);
 router.get('/', studentController.getAllStudent);
 //active list  
 router.get('/wma', studentController.getStudentsWma);
-
+//multiple student upload
+router.get('/student-upload', studentController.uploadStudentExcel);
 //get list by id
 router.get('/:id', studentController.getStudent);
 // update priority
