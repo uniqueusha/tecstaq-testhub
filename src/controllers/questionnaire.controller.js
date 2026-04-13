@@ -559,6 +559,7 @@ const getAllQuestionnaire = async (req, res) => {
                 t.total_marks,
                 t.start_time,
                 t.end_time,
+                q.cts,
                 (
                     SELECT COUNT(*) 
                     FROM questionnaire_header qh 
