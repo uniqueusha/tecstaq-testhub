@@ -1131,14 +1131,16 @@ const getResultDownload = async (req, res) => {
         getResultQuery += " ORDER BY qa.cts DESC";
 
         let result = await connection.query(getResultQuery);
-        let results = result[0];
+        let resultDownload = result[0];
 
+if (
+    resultDownload.length === 0 ||
+    resultDownload.every(item => item.attempted_questions === 0)
+) {
+    return error422("No data found.", res);
+}
 
-        if (results.length === 0) {
-            return error422("No data found.", res);
-        }
-
-        results = results.map((item, index) => ({
+        resultDownload = resultDownload.map((item, index) => ({
             "Sr No": index + 1,
             "Test": item.test_name,
             "Name": item.student_name,
@@ -1154,10 +1156,10 @@ const getResultDownload = async (req, res) => {
         const workbook = xlsx.utils.book_new();
 
         // Create a worksheet and add only required columns
-        const worksheet = xlsx.utils.json_to_sheet(results);
+        const worksheet = xlsx.utils.json_to_sheet(resultDownload);
 
         // Add the worksheet to the workbook
-        xlsx.utils.book_append_sheet(workbook, worksheet, "resultsInfo");
+        xlsx.utils.book_append_sheet(workbook, worksheet, "resultDownloadInfo");
 
         // Create a unique file name
         const excelFileName = `exported_data_${Date.now()}.xlsx`;
