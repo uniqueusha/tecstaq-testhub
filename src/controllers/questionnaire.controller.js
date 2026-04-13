@@ -734,6 +734,7 @@ const getStudentTestQuestionnaire = async (req, res) => {
 const createAnswer = async (req, res) => {
     const student_id = req.body.student_id ? req.body.student_id : '';
     const test_id = req.body.test_id ? req.body.test_id :'';
+    
     const answer = req.body.answer ? req.body.answer : [];
     if (!student_id) {
         return error422("Student id is required.", res);
@@ -754,6 +755,11 @@ const createAnswer = async (req, res) => {
         const answerResult = await connection.query(insertAnswerQuery, [student_id, test_id]);
         const answer_id = answerResult[0].insertId;
 
+        const cutOffQuery = ` SELECT * FROM tests WHERE test_id = ? `;
+        const cutOffResult = await connection.query(cutOffQuery,[test_id]);
+        const cut_off = cutOffResult[0][0].cut_off;
+        
+        let totalMarks = 0;
         let answerArray = answer;
         for (let i = 0; i < answerArray.length; i++) {
             const element = answerArray[i];
@@ -783,9 +789,21 @@ const createAnswer = async (req, res) => {
             if (correct_answer === selected_answer) {
                 marks = isHeaderResult[0][0].question_mark || 0
             }
+            // ✅ Add total marks
+            totalMarks += marks;
             const insertQuery = "INSERT INTO questionnaire_answers_footer (answer_id, questionnaire_header_id, questionnaire_footer_id, is_correct, result_status, marks ) VALUES ( ?, ?, ?, ?, ?, ?)";
             const result = await connection.query(insertQuery, [answer_id, questionnaire_header_id, questionnaire_footer_id, correct_answer, result_status, marks]);
         }
+        // ✅ Final Result Calculation
+        let final_result = totalMarks >= cut_off ? "Pass" : "Fail";
+        const updateQuery = `
+            UPDATE questionnaire_answers 
+            SET final_result = ?
+            WHERE answer_id = ?
+        `;
+
+        await connection.query(updateQuery, [final_result,  answer_id]);
+
 
         await connection.commit()
         return res.status(200).json({
@@ -980,7 +998,7 @@ const getResultold = async (req, res) => {
 }
 
 const getResult = async (req, res) => {
-    const { page, perPage, student_id, fromDate, toDate } = req.query;
+    const { page, perPage, student_id, fromDate, toDate,final_result } = req.query;
 
     let connection = await getConnection();
 
@@ -1020,6 +1038,12 @@ let countQuery = `SELECT COUNT(qa.answer_id) AS total FROM questionnaire q
             query += ` AND s.student_id = ${student_id}`;
             countQuery +=` AND s.student_id = ${student_id}`;
         }
+
+        if (final_result) {
+            query += ` AND final_result = ${final_result}`;
+            countQuery +=` AND final_result = ${final_result}`;
+        }
+
 
         query += ` GROUP BY s.student_id, q.test_id`;
         query += ` ORDER BY s.student_id DESC`;
