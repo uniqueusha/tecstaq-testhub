@@ -438,7 +438,7 @@ const studentApprove = async (req, res) => {
         const [studentIdResult] = await connection.query(studentIDQuery, [studentId]);
         console.log(studentIdResult);
         
-        const user_id = studentIdResult.user_id;
+        const user_id = studentIdResult[0].user_id;
         let user_name = studentIdResult[0].user_name;
         const email_id = studentIdResult[0].email_id;
         console.log(user_name);
