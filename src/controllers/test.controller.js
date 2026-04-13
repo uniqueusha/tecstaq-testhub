@@ -89,6 +89,7 @@ const updateTest = async (req, res) => {
     const test_date = req.body.test_date ? req.body.test_date:'';
     const duration = req.body.duration ? req.body.duration:'';
     const total_marks = req.body.total_marks ? req.body.total_marks:'';
+    const cut_off = req.body.cut_off ? req.body.cut_off :'';
     const start_time = req.body.start_time ? req.body.start_time.trim():'';
     const end_time = req.body.end_time ? req.body.end_time.trim():'';
     
@@ -116,11 +117,11 @@ const updateTest = async (req, res) => {
         // Update the Test record with new data
         const updateQuery = `
             UPDATE tests
-            SET group_id = ?, test_name = ?, test_date = ?, duration = ?, total_marks = ?, start_time = ?, end_time = ?
+            SET group_id = ?, test_name = ?, test_date = ?, duration = ?, total_marks = ?, cut_off =?, start_time = ?, end_time = ?
             WHERE test_id = ?
         `;
 
-        await connection.query(updateQuery, [ group_id, test_name, test_date, duration, total_marks, start_time, end_time, testId]);
+        await connection.query(updateQuery, [ group_id, test_name, test_date, duration, total_marks,cut_off, start_time, end_time, testId]);
         // Commit the transaction
         await connection.commit();
 

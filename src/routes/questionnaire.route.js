@@ -13,6 +13,8 @@ router.get('/', questionnaireController.getAllQuestionnaire);
 router.get('/wma', questionnaireController.getQuestionnaireWma);
 //result
 router.get('/result', questionnaireController.getResult);
+//result -download
+router.get('/result-download', questionnaireController.getResultDownload);
 //get student wise test list
 router.get('/student-test', questionnaireController.getStudentTestQuestionnaire);
 //get answer list

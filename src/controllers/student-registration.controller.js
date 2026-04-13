@@ -140,12 +140,12 @@ const updateStudent = async (req, res) => {
         //start a transaction
         await connection.beginTransaction();
 
-        // Check if group exists
-        const isGroupsExist = "SELECT * FROM groups WHERE group_id  = ?";
-        const isGroupsResult = await pool.query(isGroupsExist,[group_id]);
-        if (isGroupsResult[0].length == 0) {
-            return error422("Groups not found.", res);
-        }
+        // // Check if group exists
+        // const isGroupsExist = "SELECT * FROM groups WHERE group_id  = ?";
+        // const isGroupsResult = await pool.query(isGroupsExist,[group_id]);
+        // if (isGroupsResult[0].length == 0) {
+        //     return error422("Groups not found.", res);
+        // }
         // Check if the provided student exists and is active 
         const existingStudentQuery = "SELECT * FROM student_registration WHERE student_id =?";
         const existingStudentResult = await connection.query(existingStudentQuery, [studentId]);
@@ -160,7 +160,7 @@ const updateStudent = async (req, res) => {
             WHERE student_id = ?
         `;
 
-        await connection.query(updateQuery, [ group_id, test_id, student_name, email_id, phone_number, gender, college_name, course, course_year, role, studentId]);
+        await connection.query(updateQuery, [ 1,1,student_name, email_id, phone_number, gender, college_name, course, course_year, role, studentId]);
         // Commit the transaction
         await connection.commit();
 

@@ -1,7 +1,7 @@
 
 const pool = require("../../db");
-//const xlsx = require("xlsx");
-//const fs = require("fs");
+const xlsx = require("xlsx");
+const fs = require("fs");
 //const path = require('path');
 
 // Function to obtain a database connection
@@ -914,90 +914,8 @@ const getAllAnswer = async (req, res) => {
 }
 
 //result
-const getResultold = async (req, res) => {
-    const { page, perPage, key, student_id } = req.query;
 
-    // attempt to obtain a database connection
-    let connection = await getConnection();
-
-    try {
-
-        //start a transaction
-        await connection.beginTransaction();
-
-        let getResultQuery = `SELECT qaf.*,q.test_id, q.questionnaire_id, 
-        s.student_id, s.student_name, t.total_marks, t.test_name,q.cts
-        FROM questionnaire q
-        LEFT JOIN tests t ON t.test_id = q.test_id
-        LEFT JOIN student_registration s ON q.test_id = s.test_id
-        LEFT JOIN groups g ON g.group_id = t.group_id
-        LEFT JOIN questionnaire_answers qa ON qa.student_id = s.student_id
-        LEFT JOIN questionnaire_answers_footer qaf ON qaf.answer_id = qa.answer_id
-        
-        WHERE 1`;
-        let countQuery = `SELECT COUNT(*) AS total FROM questionnaire_answers qa
-        LEFT JOIN users u ON u.student_id = qa.student_id
-        WHERE 1`;
-
-        if (key) {
-            const lowercaseKey = key.toLowerCase().trim();
-            if (lowercaseKey === "activated") {
-                getResultQuery += ` AND qa.status = 1`;
-                countQuery += ` AND qa.status = 1`;
-            } else if (lowercaseKey === "deactivated") {
-                getResultQuery += ` AND qa.status = 0`;
-                countQuery += ` AND qa.status = 0`;
-            } else {
-                getResultQuery += ` AND LOWER(u.user_name) LIKE '%${lowercaseKey}%' `;
-                countQuery += ` AND LOWER(u.user_name) LIKE '%${lowercaseKey}%' `;
-            }
-        }
-        if (student_id) {
-            getResultQuery += ` AND qa.student_id = ${student_id}`;
-            countQuery += ` AND qa.student_id = ${student_id}`;
-        }
-
-        getResultQuery += " ORDER BY qa.cts DESC";
-
-        // Apply pagination if both page and perPage are provided
-        let total = 0;
-        if (page && perPage) {
-            const totalResult = await connection.query(countQuery);
-            total = parseInt(totalResult[0][0].total);
-
-            const start = (page - 1) * perPage;
-            getResultQuery += ` LIMIT ${perPage} OFFSET ${start}`;
-        }
-
-        const result = await connection.query(getResultQuery);
-        const answers = result[0];
-
-        // Commit the transaction
-        await connection.commit();
-        const data = {
-            status: 200,
-            message: "Answer retrieved successfully",
-            data: answers,
-        };
-        // Add pagination information if provided
-        if (page && perPage) {
-            data.pagination = {
-                per_page: perPage,
-                total: total,
-                current_page: page,
-                last_page: Math.ceil(total / perPage),
-            };
-        }
-
-        return res.status(200).json(data);
-    } catch (error) {
-        return error500(error, res);
-    } finally {
-        if (connection) connection.release()
-    }
-}
-
-const getResult = async (req, res) => {
+const getResultOld = async (req, res) => {
     const { page, perPage, student_id, fromDate, toDate,final_result } = req.query;
 
     let connection = await getConnection();
@@ -1005,16 +923,11 @@ const getResult = async (req, res) => {
     try {
         await connection.beginTransaction();
 
-        let query = ` SELECT s.student_id,s.student_name,q.test_id,t.test_name,t.total_marks,t.cut_off,
+        let query = ` SELECT s.student_id,s.student_name,q.test_id,t.test_name,t.total_marks,t.cut_off,qa.final_result,
         COUNT(qaf.answer_id) AS attempted_questions,
         SUM(CASE WHEN qaf.result_status = 'correct' THEN 1 ELSE 0 END) AS correct_questions,
         SUM(CASE WHEN qaf.result_status = 'wrong' THEN 1 ELSE 0 END) AS wrong_questions,
-        SUM(CASE WHEN qaf.is_correct = 1 THEN qaf.marks ELSE 0 END) AS correct_marks,
-    CASE 
-        WHEN SUM(CASE WHEN qaf.is_correct = 1 THEN qaf.marks ELSE 0 END) >= t.cut_off 
-        THEN 'Pass'
-        ELSE 'Fail'
-    END AS final_result
+        SUM(CASE WHEN qaf.is_correct = 1 THEN qaf.marks ELSE 0 END) AS correct_marks
     FROM questionnaire q
     LEFT JOIN tests t ON t.test_id = q.test_id
     LEFT JOIN student_registration s ON q.test_id = s.test_id
@@ -1088,6 +1001,190 @@ let countQuery = `SELECT COUNT(qa.answer_id) AS total FROM questionnaire q
     }
 };
 
+const getResult = async (req, res) => {
+    const { page, perPage, student_id, fromDate, toDate,final_result } = req.query;
+
+    let connection = await getConnection();
+
+    try {
+        await connection.beginTransaction();
+
+        let query = ` SELECT qa.student_id,s.student_name,qa.test_id,t.test_name,t.total_marks,t.cut_off,qa.final_result,
+        COUNT(qaf.answer_id) AS attempted_questions,
+        SUM(CASE WHEN qaf.result_status = 'correct' THEN 1 ELSE 0 END) AS correct_questions,
+        SUM(CASE WHEN qaf.result_status = 'wrong' THEN 1 ELSE 0 END) AS wrong_questions,
+        SUM(CASE WHEN qaf.is_correct = 1 THEN qaf.marks ELSE 0 END) AS correct_marks
+    FROM questionnaire_answers qa
+    LEFT JOIN tests t ON t.test_id = qa.test_id
+    LEFT JOIN student_registration s ON qa.student_id = s.student_id
+    LEFT JOIN questionnaire_answers_footer qaf ON qaf.answer_id = qa.answer_id WHERE 1
+`;
+let countQuery = `SELECT COUNT (DISTINCT qa.answer_id) AS total FROM questionnaire_answers qa
+    LEFT JOIN tests t ON t.test_id = qa.test_id
+    LEFT JOIN student_registration s ON qa.student_id = s.student_id
+    LEFT JOIN questionnaire_answers_footer qaf ON qaf.answer_id = qa.answer_id WHERE 1
+`;
+
+        if (fromDate && toDate) {
+            query += ` AND DATE(qa.cts) BETWEEN '${fromDate}' AND '${toDate}'`;
+            countQuery += ` AND DATE(qa.cts) BETWEEN '${fromDate}' AND '${toDate}'`;
+        }
+       
+        // Filter by student
+        if (student_id) {
+            query += ` AND qa.student_id = ${student_id}`;
+            countQuery +=` AND qa.student_id = ${student_id}`;
+        }
+
+        if (final_result) {
+            query += ` AND qa.final_result = "${final_result}"`;
+            countQuery +=` AND qa.final_result = "${final_result}"`;
+        }
+
+
+        query += ` GROUP BY qa.answer_id`;
+        query += ` ORDER BY qa.answer_id DESC`;
+
+        // Apply pagination if both page and perPage are provided
+        let total = 0;
+        if (page && perPage) {
+            const totalResult = await connection.query(countQuery);
+            total = parseInt(totalResult[0][0].total);
+
+            const start = (page - 1) * perPage;
+            query += ` LIMIT ${perPage} OFFSET ${start}`;
+        }
+        const result = await connection.query(query, countQuery);
+
+        await connection.commit();
+
+    const data = {
+            status: 200,
+            message: "Result retrieved successfully",
+            data: result[0]
+        };
+
+         // Add pagination information if provided
+        if (page && perPage) {
+            data.pagination = {
+                per_page: perPage,
+                total: total,
+                current_page: page,
+                last_page: Math.ceil(total / perPage),
+            };
+        }
+        return res.status(200).json(data);
+
+    } catch (error) {
+        console.log(error);
+        
+        await connection.rollback();
+        return error500(error, res);
+    } finally {
+        if (connection) connection.release();
+    }
+};
+
+//result download
+const getResultDownload = async (req, res) => {
+
+    const { key, student_id, fromDate, toDate,final_result } = req.query;
+
+    let connection = await getConnection();
+    try {
+        await connection.beginTransaction();
+
+        let getResultQuery = `SELECT qa.student_id,s.student_name,qa.test_id,t.test_name,t.total_marks,t.cut_off,qa.final_result,
+        COUNT(qaf.answer_id) AS attempted_questions,
+        SUM(CASE WHEN qaf.result_status = 'correct' THEN 1 ELSE 0 END) AS correct_questions,
+        SUM(CASE WHEN qaf.result_status = 'wrong' THEN 1 ELSE 0 END) AS wrong_questions,
+        SUM(CASE WHEN qaf.is_correct = 1 THEN qaf.marks ELSE 0 END) AS correct_marks
+    FROM questionnaire_answers qa
+    LEFT JOIN tests t ON t.test_id = qa.test_id
+    LEFT JOIN student_registration s ON qa.student_id = s.student_id
+    LEFT JOIN questionnaire_answers_footer qaf ON qaf.answer_id = qa.answer_id WHERE 1
+`;
+
+        if (key) {
+            const lowercaseKey = key.toLowerCase().trim();
+            if (lowercaseKey === "activated") {
+                getResultQuery += ` AND status = 1`;
+            } else if (lowercaseKey === "deactivated") {
+                getResultQuery += ` AND status = 0`;
+            } else {
+                getResultQuery += ` AND (LOWER(domain_name) LIKE '%${lowercaseKey}%' || LOWER(owner) LIKE '%${lowercaseKey}%' || LOWER(mobile_number) LIKE '%${lowercaseKey}%' || LOWER(amount) LIKE '%${lowercaseKey}%' || DATE_FORMAT(expiry_date, ''%d-%m-%Y'') LIKE '%${lowercaseKey}%')`;
+            }
+        }
+
+        if (fromDate && toDate) {
+            getResultQuery += ` AND DATE(qa.cts) BETWEEN '${fromDate}' AND '${toDate}'`;
+        }
+       
+        // Filter by student
+        if (student_id) {
+            getResultQuery += ` AND qa.student_id = ${student_id}`;        }
+
+        if (final_result) {
+            getResultQuery += ` AND qa.final_result = "${final_result}"`;
+        }
+
+        getResultQuery += " ORDER BY qa.cts DESC";
+
+        let result = await connection.query(getResultQuery);
+        let results = result[0];
+
+
+        if (results.length === 0) {
+            return error422("No data found.", res);
+        }
+
+        results = results.map((item, index) => ({
+            "Sr No": index + 1,
+            "Test": item.test_name,
+            "Name": item.student_name,
+            "Attempted Questions": item.attempted_questions,
+            "Correct Questions": item.correct_questions,
+            "Wrong Questions": item.wrong_questions,
+            "Total Marks": item.total_marks,
+            "Result": item.final_result,
+
+        }));
+
+        // Create a new workbook
+        const workbook = xlsx.utils.book_new();
+
+        // Create a worksheet and add only required columns
+        const worksheet = xlsx.utils.json_to_sheet(results);
+
+        // Add the worksheet to the workbook
+        xlsx.utils.book_append_sheet(workbook, worksheet, "resultsInfo");
+
+        // Create a unique file name
+        const excelFileName = `exported_data_${Date.now()}.xlsx`;
+
+        // Write the workbook to a file
+        xlsx.writeFile(workbook, excelFileName);
+
+        // Send the file to the client
+        res.download(excelFileName, (err) => {
+            if (err) {
+                console.error(err);
+                res.status(500).send("Error downloading the file.");
+            } else {
+                fs.unlinkSync(excelFileName);
+            }
+        });
+
+        await connection.commit();
+    } catch (error) {
+        console.log(error);
+        
+        return error500(error, res);
+    } finally {
+        if (connection) connection.release();
+    }
+};
+
 
 module.exports = {
     createQuestionnaire,
@@ -1099,5 +1196,6 @@ module.exports = {
     getStudentTestQuestionnaire,
     createAnswer,
     getAllAnswer,
-    getResult
+    getResult,
+    getResultDownload
 }
