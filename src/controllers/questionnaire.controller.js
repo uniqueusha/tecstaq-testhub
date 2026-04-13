@@ -1111,7 +1111,7 @@ const getResult = async (req, res) => {
         COUNT(qaf.answer_id) AS attempted_questions,
         SUM(CASE WHEN qaf.result_status = 'correct' THEN 1 ELSE 0 END) AS correct_questions,
         SUM(CASE WHEN qaf.result_status = 'wrong' THEN 1 ELSE 0 END) AS wrong_questions,
-        SUM(CASE WHEN qaf.is_correct = 1 THEN qaf.marks ELSE 0 END) AS correct_marks
+COALESCE(SUM(CASE WHEN qaf.result_status = 'correct' THEN qaf.marks ELSE 0 END), 0) AS correct_marks
     FROM questionnaire_answers qa
     LEFT JOIN tests t ON t.test_id = qa.test_id
     LEFT JOIN student_registration s ON qa.student_id = s.student_id
@@ -1196,7 +1196,7 @@ const getResultDownload = async (req, res) => {
         COUNT(qaf.answer_id) AS attempted_questions,
         SUM(CASE WHEN qaf.result_status = 'correct' THEN 1 ELSE 0 END) AS correct_questions,
         SUM(CASE WHEN qaf.result_status = 'wrong' THEN 1 ELSE 0 END) AS wrong_questions,
-        SUM(CASE WHEN qaf.is_correct = 1 THEN qaf.marks ELSE 0 END) AS correct_marks
+COALESCE(SUM(CASE WHEN qaf.result_status = 'correct' THEN qaf.marks ELSE 0 END), 0) AS correct_marks
     FROM questionnaire_answers qa
     LEFT JOIN tests t ON t.test_id = qa.test_id
     LEFT JOIN student_registration s ON qa.student_id = s.student_id
@@ -1245,6 +1245,7 @@ if (
             "Attempted Questions": item.attempted_questions,
             "Correct Questions": item.correct_questions,
             "Wrong Questions": item.wrong_questions,
+            "Obtained Marks": item.correct_marks,
             "Total Marks": item.total_marks,
             "Result": item.final_result,
 
