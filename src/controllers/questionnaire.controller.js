@@ -432,7 +432,7 @@ const getAllQuestionnaireStudent = async (req, res) => {
     }
 }
 
-const getAllQuestionnaire = async (req, res) => {
+const getAllQuestionnaireold = async (req, res) => {
     const { page, perPage, key, student_id, group_id } = req.query;
     const newDate = new Date(); // Current timestamp
     const todayDate = newDate.toISOString().split('T')[0];
@@ -445,10 +445,9 @@ const getAllQuestionnaire = async (req, res) => {
 
         //start a transaction
         await connection.beginTransaction();
-
-        let getquestionnaireQuery = `SELECT 
-    q.test_id, 
-    q.questionnaire_id, 
+        
+        let getquestionnaireQuery = `SELECT DISTINCT q.questionnaire_id, 
+        q.test_id, 
     g.group_id,
     g.group_name, 
     s.student_id, 
@@ -537,6 +536,104 @@ LEFT JOIN groups g ON g.group_id = t.group_id
         if (connection) connection.release()
     }
 }
+
+const getAllQuestionnaire = async (req, res) => {
+    const { page, perPage, key, student_id, group_id } = req.query;
+
+    const todayDate = new Date().toISOString().split('T')[0];
+
+    let connection = await getConnection();
+
+    try {
+        await connection.beginTransaction();
+
+        let query = `
+            SELECT 
+                q.questionnaire_id,
+                q.test_id,
+                g.group_id,
+                g.group_name,
+                t.test_name,
+                t.test_date,
+                t.duration,
+                t.total_marks,
+                t.start_time,
+                t.end_time,
+                (
+                    SELECT COUNT(*) 
+                    FROM questionnaire_header qh 
+                    WHERE qh.questionnaire_id = q.questionnaire_id
+                ) AS total_questions
+            FROM questionnaire q
+            LEFT JOIN tests t ON t.test_id = q.test_id
+            LEFT JOIN groups g ON g.group_id = t.group_id
+            WHERE 1
+        `;
+        let countQuery = `SELECT COUNT(*) AS total FROM questionnaire q
+       LEFT JOIN tests t ON t.test_id = q.test_id
+            LEFT JOIN groups g ON g.group_id = t.group_id
+            WHERE 1`;
+
+        // 🔍 Search
+        if (key) {
+            query += ` AND t.test_name LIKE '%${key}%'`;
+        }
+
+        // 👤 Student filter (NO JOIN → NO duplicate)
+        if (student_id) {
+            query += ` AND q.test_id IN ( SELECT test_id 
+                    FROM student_registration 
+                    WHERE student_id = ${student_id}
+                ) AND DATE(t.test_date) = '${todayDate}' `;
+            countQuery += ` AND q.test_id IN ( SELECT test_id 
+                    FROM student_registration 
+                    WHERE student_id = ${student_id}
+                ) AND DATE(t.test_date) = '${todayDate}'`
+        }
+
+        // 👥 Group filter
+        if (group_id) {
+            query += ` AND g.group_id = ${group_id}`;
+        }
+
+        query += ` ORDER BY q.cts DESC`;
+
+         // Apply pagination if both page and perPage are provided
+        let total = 0;
+        if (page && perPage) {
+            const totalResult = await connection.query(countQuery);
+            total = parseInt(totalResult[0][0].total);
+
+            const start = (page - 1) * perPage;
+            query += ` LIMIT ${perPage} OFFSET ${start}`;
+        }
+
+        const [result] = await connection.query(query);
+
+        await connection.commit();
+
+       const data = {
+            status: 200,
+            message: "Questionnaire fetched successfully",
+            data: result
+        };
+    if (page && perPage) {
+            data.pagination = {
+                per_page: perPage,
+                total: total,
+                current_page: page,
+                last_page: Math.ceil(total / perPage),
+            };
+        }
+
+        return res.status(200).json(data);
+    } catch (error) {
+        console.log(error);
+        return error500(error, res);
+    } finally {
+        if (connection) connection.release();
+    }
+};
 
 //questionnaire list by id
 const getQuestionnaire = async (req, res) => {
