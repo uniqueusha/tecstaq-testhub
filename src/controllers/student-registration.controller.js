@@ -63,12 +63,12 @@ const createStudent = async (req, res)=>{
         return error422("Role is required.", res);
     } 
 
-    // Check if group exists
-    const isGroupsExist = "SELECT * FROM groups WHERE group_id  = ?";
-    const isGroupsResult = await pool.query(isGroupsExist,[group_id]);
-    if (isGroupsResult[0].length == 0) {
-        return error422("Groups not found.", res);
-    }
+    // // Check if group exists
+    // const isGroupsExist = "SELECT * FROM groups WHERE group_id  = ?";
+    // const isGroupsResult = await pool.query(isGroupsExist,[group_id]);
+    // if (isGroupsResult[0].length == 0) {
+    //     return error422("Groups not found.", res);
+    // }
 
     let connection = await getConnection();
 
@@ -76,7 +76,7 @@ const createStudent = async (req, res)=>{
         // start the transaction
         await connection.beginTransaction();
         const insertQuery = "INSERT INTO student_registration (group_id, test_id, student_name, email_id, phone_number, gender, college_name, course, course_year, role)VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        const result = await connection.query(insertQuery,[group_id, test_id, student_name, email_id, phone_number, gender, college_name, course, course_year, role]);
+        const result = await connection.query(insertQuery,[1, 1, student_name, email_id, phone_number, gender, college_name, course, course_year, role]);
         const student_id = result[0].insertId
 
         //insert into user
