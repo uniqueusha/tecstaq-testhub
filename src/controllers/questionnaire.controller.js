@@ -1286,6 +1286,44 @@ if (
     }
 };
 
+//count Result
+const getResultDashboard = async (req, res) => {
+    const { key } = req.query;
+    
+
+    // attempt to obtain a database connection
+    let connection = await getConnection();
+
+    try {
+
+        //start a transaction
+        await connection.beginTransaction();
+        
+        // count
+        let countResultQuery = `SELECT qa.test_id, t.test_name, qa.student_id, sr.student_name, qa.final_result FROM questionnaire_answers qa
+        LEFT JOIN tests t ON t.test_id = qa.test_id
+        LEFT JOIN student_registration sr ON sr.student_id = qa.student_id
+        WHERE 1  `;
+       
+        let results = await connection.query(countResultQuery);
+       
+        const result = results[0][0];
+
+        // Commit the transaction
+        await connection.commit();
+        const data = {
+            status: 200,
+            message: "Result fetched successfully ",
+            data:result,   
+        };
+
+        return res.status(200).json(data);
+    } catch (error) {
+        return error500(error, res);
+    } finally {
+        if (connection) connection.release()
+    }
+}
 
 module.exports = {
     createQuestionnaire,
@@ -1298,5 +1336,7 @@ module.exports = {
     createAnswer,
     getAllAnswer,
     getResult,
-    getResultDownload
+    getResultDownload,
+    
+    getResultDashboard
 }
