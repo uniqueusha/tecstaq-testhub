@@ -9,6 +9,8 @@ router.post('/', checkAuth,groupController.createGroup);
 router.get('/', groupController.getAllGroup);
 //active list  
 router.get('/wma', groupController.getGroupWma);
+//group 
+router.get('/group-count', groupController.getGroupCount);
 //get list by id
 router.get('/:id', groupController.getGroup);
 // update priority

@@ -308,12 +308,50 @@ const getGroupWma = async (req, res) => {
     }
 }
 
+//count group
+const getGroupCount = async (req, res) => {
+    const { key } = req.query;
+    
+
+    // attempt to obtain a database connection
+    let connection = await getConnection();
+
+    try {
+
+        //start a transaction
+        await connection.beginTransaction();
+        let get_group_count = 0;
+       
+        // count
+        let countGroupQuery = `SELECT COUNT(*) AS total FROM groups g
+        WHERE 1  `;
+       
+        let countGroupResult = await connection.query(countGroupQuery);
+        get_group_count = parseInt(countGroupResult[0][0].total);
+
+        // Commit the transaction
+        await connection.commit();
+        const data = {
+            status: 200,
+            message: "Group Count",
+            get_group_count:get_group_count,   
+        };
+
+        return res.status(200).json(data);
+    } catch (error) {
+        return error500(error, res);
+    } finally {
+        if (connection) connection.release()
+    }
+}
+
 module.exports = {
     createGroup,
     getAllGroup,
     getGroupWma,
     updateGroup,
     onStatusChange,
-    getGroup
+    getGroup,
+    getGroupCount
     
 }

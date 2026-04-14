@@ -337,11 +337,51 @@ const getTestWma = async (req, res) => {
     }
 }
 
+//count Test
+const getTestCount = async (req, res) => {
+    const { key } = req.query;
+    
+
+    // attempt to obtain a database connection
+    let connection = await getConnection();
+
+    try {
+
+        //start a transaction
+        await connection.beginTransaction();
+        let get_test_count = 0;
+       
+        // count
+        let countTestQuery = `SELECT COUNT(*) AS total FROM tests t
+        WHERE 1  `;
+       
+        let countTestResult = await connection.query(countTestQuery);
+        get_test_count = parseInt(countTestResult[0][0].total);
+
+        // Commit the transaction
+        await connection.commit();
+        const data = {
+            status: 200,
+            message: "Test Count",
+            get_test_count:get_test_count,   
+        };
+
+        return res.status(200).json(data);
+    } catch (error) {
+        return error500(error, res);
+    } finally {
+        if (connection) connection.release()
+    }
+}
+
+
+
 module.exports = {
     createTest,
     getAllTest,
     getTestWma,
     updateTest,
     onStatusChange,
-    getTest
+    getTest,
+    getTestCount
 }

@@ -567,11 +567,11 @@ const studentGroupApprove = async (req, res) => {
         const studentIDQuery = ` SELECT * FROM users WHERE group_id = ?`;
         const [studentIdResult] = await connection.query(studentIDQuery, [groupId]);
         
-        const user_id = studentIdResult[0].user_id;
-        let user_name = studentIdResult.map(item => item.email_id);
-
-        const email_id = studentIdResult[0].email_id;
         if (is_approved === 1) {
+            for (let user of studentIdResult) {
+        const user_id = user.user_id;
+        const user_name = user.user_name;
+        const email_id = user.email_id;
         let length = 8,
         charset =
         "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
@@ -626,10 +626,11 @@ const studentGroupApprove = async (req, res) => {
             subject: "Welcome to Tecstaq Testhub! Your Account Has Been Created", // Subject line.
             html: message,
         };
+        await transporter.sendMail(mailOptions);
+    }
             
         // Commit the transaction
         await connection.commit();
-        await transporter.sendMail(mailOptions);
 
         return res.status(200).json({
             status: 200,
@@ -637,6 +638,8 @@ const studentGroupApprove = async (req, res) => {
         });
     }
     } catch (error) {
+        console.log(error);
+        
         return error500(error, res);
     } finally {
         if (connection) connection.release()
@@ -685,16 +688,16 @@ const uploadStudentExcel = async (req, res) => {
             const role = row.role || "";
 
             // Validation
-            if (!student_name || !email_id || !phone_number || !course_year || !role) {
+            if (!student_name || !email_id || !phone_number || !course_year ) {
                 throw new Error(`Missing required fields for ${student_name || "row"}`);
             }
 
-            // Check if group exists
-        const isGroupExist = "SELECT * FROM groups WHERE group_id  = ?";
-        const isGroupResult = await pool.query(isGroupExist,[group_id]);
-        if (isGroupResult[0].length == 0) {
-            return error422("Group not found.", res);
-        }
+        //     // Check if group exists
+        // const isGroupExist = "SELECT * FROM groups WHERE group_id  = ?";
+        // const isGroupResult = await pool.query(isGroupExist,[group_id]);
+        // if (isGroupResult[0].length == 0) {
+        //     return error422("Group not found.", res);
+        // }
             // Insert into student_registration
             const [studentResult] = await connection.query(
                 `INSERT INTO student_registration 
@@ -725,8 +728,8 @@ const uploadStudentExcel = async (req, res) => {
                     student_name,
                     email_id,
                     phone_number,
-                    role,
-                    group_id,
+                    "student",
+                    1,
                     student_id
                 ]
             );
@@ -760,7 +763,42 @@ const uploadStudentExcel = async (req, res) => {
     }
 };
 
+//count Student
+const getStudentCount = async (req, res) => {
+    const { key } = req.query;
+    
 
+    // attempt to obtain a database connection
+    let connection = await getConnection();
+
+    try {
+
+        //start a transaction
+        await connection.beginTransaction();
+        let get_student_count = 0;
+       
+        // count
+        let countStudentQuery = `SELECT COUNT(*) AS total FROM student_registration sr
+        WHERE 1  `;
+       
+        let countStudentResult = await connection.query(countStudentQuery);
+        get_student_count = parseInt(countStudentResult[0][0].total);
+
+        // Commit the transaction
+        await connection.commit();
+        const data = {
+            status: 200,
+            message: "Student Count",
+            get_student_count:get_student_count,   
+        };
+
+        return res.status(200).json(data);
+    } catch (error) {
+        return error500(error, res);
+    } finally {
+        if (connection) connection.release()
+    }
+}
 
 module.exports = {
     createStudent,
@@ -771,5 +809,6 @@ module.exports = {
     getStudent,
     studentApprove,
     studentGroupApprove ,
-    uploadStudentExcel 
+    uploadStudentExcel,
+    getStudentCount
 }

@@ -9,6 +9,8 @@ router.post('/', testController.createTest);
 router.get('/', testController.getAllTest);
 //active list  
 router.get('/wma', testController.getTestWma);
+//count
+router.get('/test-count', testController.getTestCount);
 //get list by id
 router.get('/:id', testController.getTest);
 // update priority
