@@ -181,7 +181,7 @@ const updateStudent = async (req, res) => {
             WHERE student_id = ?
         `;
 
-        await connection.query(updateUserQuery, [ user_name, email_id, mobile_number, "student",1, studentId]);
+        await connection.query(updateUserQuery, [ student_name, email_id, mobile_number, "student",1, studentId]);
 
         // Commit the transaction
         await connection.commit();
@@ -191,6 +191,8 @@ const updateStudent = async (req, res) => {
             message: "Student updated successfully.",
         });
     } catch (error) {
+        console.log(error);
+        
         return error500(error, res);
     } finally {
         if (connection) connection.release()
