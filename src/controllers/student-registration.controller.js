@@ -93,7 +93,7 @@ const createStudent = async (req, res)=>{
 
         //insert into user
         const insertUserQuery = `INSERT INTO users (user_name, email_id, mobile_number, role, group_id, student_id ) VALUES (?, ?, ?, ?, ?, ?)`;
-        const insertUserValues = [ student_name, email_id, phone_number, role, group_id, student_id];
+        const insertUserValues = [ student_name, email_id, phone_number, role, 1, student_id];
         const insertuserResult = await connection.query(insertUserQuery, insertUserValues);
         const user_id = insertuserResult[0].insertId;
         
@@ -436,13 +436,11 @@ const studentApprove = async (req, res) => {
 
         const studentIDQuery = ` SELECT * FROM users WHERE student_id = ?`;
         const [studentIdResult] = await connection.query(studentIDQuery, [studentId]);
-        console.log(studentIdResult);
         
         const user_id = studentIdResult[0].user_id;
         let user_name = studentIdResult[0].user_name;
         const email_id = studentIdResult[0].email_id;
-        console.log(user_name);
-        
+        if (is_approved === 1) {
         let length = 8,
         charset =
         "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
@@ -501,6 +499,7 @@ const studentApprove = async (req, res) => {
             subject: "Welcome to Tecstaq Testhub! Your Account Has Been Created", // Subject line.
             html: message,
         };
+    
         // Commit the transaction
         await connection.commit();
         await transporter.sendMail(mailOptions);
@@ -509,9 +508,8 @@ const studentApprove = async (req, res) => {
             status: 200,
             message: `Student Approved successfully.`,
         });
-    } catch (error) {
-console.log(error);
-
+    }
+ } catch (error) {
         return error500(error, res);
     } finally {
         if (connection) connection.release()
@@ -554,12 +552,77 @@ const studentGroupApprove = async (req, res) => {
 
         await connection.query(updateUserQuery, [ is_approved, groupId]);
 
+        const studentIDQuery = ` SELECT * FROM users WHERE group_id = ?`;
+        const [studentIdResult] = await connection.query(studentIDQuery, [groupId]);
+        
+        const user_id = studentIdResult[0].user_id;
+        let user_name = studentIdResult[0].user_name;
+        const email_id = studentIdResult[0].email_id;
+        if (is_approved === 1) {
+        let length = 8,
+        charset =
+        "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
+        password = "";
+        for (let i = 0, n = charset.length; i < length; ++i) {
+            password += charset.charAt(Math.floor(Math.random() * n));
+        }
+        const hash = await bcrypt.hash(password, 10); // Hash the password using bcrypt
+        //insert into Untitled
+        const insertUntitledQuery =
+        "INSERT INTO untitled (user_id, extenstions) VALUES (?,?)";
+        const insertUntitledValues = [user_id, hash];
+        const untitledResult = await connection.query(insertUntitledQuery, insertUntitledValues)
+        const message = `
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+          <meta charset="UTF-8">
+          <title>Welcome to test</title>
+          <style>
+              div{
+              font-family: Arial, sans-serif; 
+               margin: 0px;
+                padding: 0px;
+                color:black;
+              }
+          </style>
+        </head>
+        <body>
+        <div>
+        <h2 style="text-transform: capitalize;">Hi ${user_name},</h2>
+        <h3>Welcome to Tecstaq!</h3>
+
+        <p>Your account has been successfully created. Here are your login details:</p>
+        <p>Email: ${email_id}</p>
+        <p>Temporary Password: ${password}</P>
+        <p>You can log in using the following link:
+          <a href="https://tecstaq.testhub.com/">https://tecstaq.testhub.com/</a></p>
+          <p>For security reasons, please change your password after your first login.</p>
+          <p>If you didn’t request this account or believe this was created in error, please contact our support team at support@tecstaq.com.</p>
+          <p>Thank you,</p>
+          <p><strong>Tecstaq Testhub</strong></p>
+
+        </div>
+        </body>
+        </html>`;
+        // Prepare the email message options.
+        const mailOptions = {
+            from: "support@tecstaq.com", // Sender address from environment variables.
+            to: studentIdResult.map(item => item.email_id), // Recipient's name and email address."sushantsjamdade@gmail.com",
+            // bcc: ["sushantsjamdade@gmail.com"],
+            subject: "Welcome to Tecstaq Testhub! Your Account Has Been Created", // Subject line.
+            html: message,
+        };
+            
         // Commit the transaction
         await connection.commit();
+        await transporter.sendMail(mailOptions);
+
         return res.status(200).json({
             status: 200,
             message: `Student Group Approved successfully.`,
         });
+    }
     } catch (error) {
         return error500(error, res);
     } finally {
