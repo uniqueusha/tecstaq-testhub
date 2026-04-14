@@ -568,7 +568,8 @@ const studentGroupApprove = async (req, res) => {
         const [studentIdResult] = await connection.query(studentIDQuery, [groupId]);
         
         const user_id = studentIdResult[0].user_id;
-        let user_name = studentIdResult[0].user_name;
+        let user_name = studentIdResult.map(item => item.email_id);
+
         const email_id = studentIdResult[0].email_id;
         if (is_approved === 1) {
         let length = 8,
