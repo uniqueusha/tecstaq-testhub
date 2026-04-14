@@ -173,6 +173,16 @@ const updateStudent = async (req, res) => {
         `;
 
         await connection.query(updateQuery, [ 1,1,student_name, email_id, phone_number, gender, college_name, course, course_year, role, studentId]);
+
+         // Update the user record with new data
+        const updateUserQuery = `
+            UPDATE users
+            SET user_name = ?, email_id = ?, mobile_number = ?, role = ?, group_id = ?
+            WHERE student_id = ?
+        `;
+
+        await connection.query(updateUserQuery, [ user_name, email_id, mobile_number, "student", studentId]);
+
         // Commit the transaction
         await connection.commit();
 
@@ -688,8 +698,8 @@ const uploadStudentExcel = async (req, res) => {
                 (group_id, test_id, student_name, email_id, phone_number, gender, college_name, course, course_year, role)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                 [
-                    group_id,
-                    test_id,
+                    1,
+                    1,
                     student_name,
                     email_id,
                     phone_number,
@@ -697,7 +707,7 @@ const uploadStudentExcel = async (req, res) => {
                     college_name,
                     course,
                     course_year,
-                    role
+                    "student"
                 ]
             );
 
