@@ -181,7 +181,7 @@ const updateStudent = async (req, res) => {
             WHERE student_id = ?
         `;
 
-        await connection.query(updateUserQuery, [ user_name, email_id, mobile_number, "student", studentId]);
+        await connection.query(updateUserQuery, [ user_name, email_id, mobile_number, "student",1, studentId]);
 
         // Commit the transaction
         await connection.commit();
