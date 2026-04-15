@@ -568,23 +568,27 @@ const studentGroupApprove = async (req, res) => {
         const [studentIdResult] = await connection.query(studentIDQuery, [groupId]);
         
         if (is_approved === 1) {
+
             for (let user of studentIdResult) {
-        const user_id = user.user_id;
-        const user_name = user.user_name;
-        const email_id = user.email_id;
+            const user_id = user.user_id;
+            const user_name = user.user_name;
+            const email_id = user.email_id;
         let length = 8,
         charset =
         "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789",
         password = "";
+
         for (let i = 0, n = charset.length; i < length; ++i) {
             password += charset.charAt(Math.floor(Math.random() * n));
         }
+
         const hash = await bcrypt.hash(password, 10); // Hash the password using bcrypt
         //insert into Untitled
         const insertUntitledQuery =
         "INSERT INTO untitled (user_id, extenstions) VALUES (?,?)";
         const insertUntitledValues = [user_id, hash];
-        const untitledResult = await connection.query(insertUntitledQuery, insertUntitledValues)
+        const untitledResult = await connection.query(insertUntitledQuery, insertUntitledValues);
+        
         const message = `
         <!DOCTYPE html>
         <html lang="en">
@@ -621,7 +625,7 @@ const studentGroupApprove = async (req, res) => {
         // Prepare the email message options.
         const mailOptions = {
             from: "support@tecstaq.com", // Sender address from environment variables.
-            to: studentIdResult.map(item => item.email_id), // Recipient's name and email address."sushantsjamdade@gmail.com",
+            to: email_id, // Recipient's name and email address."sushantsjamdade@gmail.com",
             // bcc: ["sushantsjamdade@gmail.com"],
             subject: "Welcome to Tecstaq Testhub! Your Account Has Been Created", // Subject line.
             html: message,
