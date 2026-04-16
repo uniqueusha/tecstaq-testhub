@@ -659,7 +659,7 @@ const getQuestionnaire = async (req, res) => {
         const questionnaire = questionnaireResult[0][0];
 
         //get header
-        let headerQuery = `SELECT qh.*, qt.question_type FROM questionnaire_header qh
+        let headerQuery = `SELECT qh.questionnaire_header_id, qh.questionnaire_id, qh.question, qh.question_mark, qh.question_type_id, qh.status, qh.cts, qt.question_type FROM questionnaire_header qh
             LEFT JOIN question_type qt ON qt.question_type_id = qh.question_type_id
             WHERE qh.questionnaire_id = ? AND qh.status = 1`;
         let headerResult = await connection.query(headerQuery, [questionnaireId]);
@@ -830,6 +830,7 @@ const getStudentTestQuestionnaire = async (req, res) => {
 const createAnswer = async (req, res) => {
     const student_id = req.body.student_id ? req.body.student_id : '';
     const test_id = req.body.test_id ? req.body.test_id :'';
+    const tab_status = req.body.tab_status ? req.body.tab_status : null ;
     
     const answer = req.body.answer ? req.body.answer : [];
     if (!student_id) {
@@ -847,8 +848,8 @@ const createAnswer = async (req, res) => {
     try {
         // start the transaction
         await connection.beginTransaction();
-        const insertAnswerQuery = "INSERT INTO questionnaire_answers ( student_id, test_id ) VALUES ( ? , ?)";
-        const answerResult = await connection.query(insertAnswerQuery, [student_id, test_id]);
+        const insertAnswerQuery = "INSERT INTO questionnaire_answers ( student_id, test_id, tab_status ) VALUES ( ? , ?, ?)";
+        const answerResult = await connection.query(insertAnswerQuery, [student_id, test_id, tab_status]);
         const answer_id = answerResult[0].insertId;
 
         const cutOffQuery = ` SELECT * FROM tests WHERE test_id = ? `;
