@@ -1099,14 +1099,14 @@ let countQuery = `SELECT COUNT(qa.answer_id) AS total FROM questionnaire q
 };
 
 const getResult = async (req, res) => {
-    const { page, perPage, student_id, fromDate, toDate,final_result } = req.query;
+    const { page, perPage, student_id, fromDate, toDate,final_result, tab_status } = req.query;
 
     let connection = await getConnection();
 
     try {
         await connection.beginTransaction();
 
-        let query = ` SELECT qa.student_id,s.student_name,qa.test_id,t.test_name,t.total_marks,t.cut_off,qa.final_result,
+        let query = ` SELECT qa.student_id,s.student_name,qa.test_id,t.test_name,t.total_marks,t.cut_off,qa.final_result,qa.tab_status,
         COUNT(qaf.answer_id) AS attempted_questions,
         SUM(CASE WHEN qaf.result_status = 'correct' THEN 1 ELSE 0 END) AS correct_questions,
         SUM(CASE WHEN qaf.result_status = 'wrong' THEN 1 ELSE 0 END) AS wrong_questions,
@@ -1137,6 +1137,13 @@ let countQuery = `SELECT COUNT (DISTINCT qa.answer_id) AS total FROM questionnai
             query += ` AND qa.final_result = "${final_result}"`;
             countQuery +=` AND qa.final_result = "${final_result}"`;
         }
+
+        if (tab_status) {
+            query += ` AND qa.tab_status = "${tab_status}"`;
+            countQuery +=` AND qa.tab_status = "${tab_status}"`;
+        }
+
+        
 
 
         query += ` GROUP BY qa.answer_id`;
