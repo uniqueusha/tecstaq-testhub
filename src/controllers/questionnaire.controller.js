@@ -139,8 +139,6 @@ const updateQuestionnaire = async (req, res) => {
         `;
         await connection.query(updateQuestionnaireQuery, [test_id, questionnaireId]);
 
-
-
         // Update the questionnaire header record with new data
         let questionnaireHeaderArray = questionnaireHeader
         for (let i = 0; i < questionnaireHeaderArray.length; i++) {
@@ -173,8 +171,8 @@ const updateQuestionnaire = async (req, res) => {
                 const option = elements.option ? elements.option : '';
 
                 if (questionnaire_footer_id) {
-                    let updateQuery = `UPDATE questionnaire_footer SET option  = ? WHERE questionnaire_footer_id = ? AND questionnaire_header_id = ?`;
-                    let updateValues = [questionnaireId, option, questionnaire_footer_id];
+                    let updateQuery = `UPDATE questionnaire_footer SET option  = ?, questionnaire_id = ? WHERE questionnaire_footer_id = ? AND questionnaire_header_id = ?`;
+                    let updateValues = [ option, questionnaireId, questionnaire_footer_id, questionnaire_header_id];
                     let updateResult = await connection.query(updateQuery, updateValues);
                 } else {
                     let insertquestionnaireFooterQuery = 'INSERT INTO questionnaire_footer (questionnaire_id,questionnaire_header_id, option) VALUES (?, ?, ?)';
@@ -1337,6 +1335,5 @@ module.exports = {
     getAllAnswer,
     getResult,
     getResultDownload,
-    
     getResultDashboard
 }
