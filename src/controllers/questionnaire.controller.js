@@ -1121,6 +1121,20 @@ let countQuery = `SELECT COUNT (DISTINCT qa.answer_id) AS total FROM questionnai
     LEFT JOIN student_registration s ON qa.student_id = s.student_id
     LEFT JOIN questionnaire_answers_footer qaf ON qaf.answer_id = qa.answer_id WHERE 1
 `;
+ if (key) {
+            const lowercaseKey = key.toLowerCase().trim();
+            if (lowercaseKey === "activated") {
+                query += ` AND qa.status = 1`;
+                countQuery += ` AND qa.status = 1`;
+            } else if (lowercaseKey === "deactivated") {
+                query += ` AND qa.status = 0`;
+                countQuery += ` AND qa.status = 0`;
+            } else {
+                query += ` AND LOWER(t.test_name) LIKE '%${lowercaseKey}%' OR LOWER(s.student_name) LIKE '%${lowercaseKey}%' OR LOWER(t.total_marks) LIKE '%${lowercaseKey}%' OR LOWER(qa.final_result) LIKE '%${lowercaseKey}%' OR LOWER(qa.tab_status) LIKE '%${lowercaseKey}%')`;
+                countQuery += ` AND LOWER(t.test_name) LIKE '%${lowercaseKey}%' OR LOWER(s.student_name) LIKE '%${lowercaseKey}%' OR LOWER(t.total_marks) LIKE '%${lowercaseKey}%' OR LOWER(qa.final_result) LIKE '%${lowercaseKey}%' OR LOWER(qa.tab_status) LIKE '%${lowercaseKey}%')`;
+            
+            }
+        }
 
         if (fromDate && toDate) {
             query += ` AND DATE(qa.cts) BETWEEN '${fromDate}' AND '${toDate}'`;
@@ -1198,7 +1212,7 @@ const getResultDownload = async (req, res) => {
     try {
         await connection.beginTransaction();
 
-        let getResultQuery = `SELECT qa.student_id,s.student_name,qa.test_id,t.test_name,t.total_marks,t.cut_off,qa.final_result,
+        let getResultQuery = `SELECT qa.student_id,s.student_name,qa.test_id,t.test_name,t.total_marks,t.cut_off,qa.final_result,qa.tab_status,
         COUNT(qaf.answer_id) AS attempted_questions,
         SUM(CASE WHEN qaf.result_status = 'correct' THEN 1 ELSE 0 END) AS correct_questions,
         SUM(CASE WHEN qaf.result_status = 'wrong' THEN 1 ELSE 0 END) AS wrong_questions,
@@ -1216,7 +1230,7 @@ COALESCE(SUM(CASE WHEN qaf.result_status = 'correct' THEN qaf.marks ELSE 0 END),
             } else if (lowercaseKey === "deactivated") {
                 getResultQuery += ` AND status = 0`;
             } else {
-                getResultQuery += ` AND (LOWER(domain_name) LIKE '%${lowercaseKey}%' || LOWER(owner) LIKE '%${lowercaseKey}%' || LOWER(mobile_number) LIKE '%${lowercaseKey}%' || LOWER(amount) LIKE '%${lowercaseKey}%' || DATE_FORMAT(expiry_date, ''%d-%m-%Y'') LIKE '%${lowercaseKey}%')`;
+                getResultQuery += ` AND LOWER(t.test_name) LIKE '%${lowercaseKey}%' OR LOWER(s.student_name) LIKE '%${lowercaseKey}%' OR LOWER(t.total_marks) LIKE '%${lowercaseKey}%' OR LOWER(qa.final_result) LIKE '%${lowercaseKey}%' OR LOWER(qa.tab_status) LIKE '%${lowercaseKey}%')`;
             }
         }
 
