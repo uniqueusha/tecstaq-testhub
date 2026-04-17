@@ -23,6 +23,8 @@ router.get('/student-test', questionnaireController.getStudentTestQuestionnaire)
 router.get('/answer-list', questionnaireController.getAllAnswer);
 //get list by id
 router.get('/:id', questionnaireController.getQuestionnaire);
+//get list by id admin
+router.get('/admin/:id', questionnaireController.getQuestionnaireAdmin);
 // update priority
 router.put('/:id', questionnaireController.updateQuestionnaire);
 //update status

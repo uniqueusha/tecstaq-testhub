@@ -646,7 +646,7 @@ const getQuestionnaire = async (req, res) => {
         //start a transaction
         await connection.beginTransaction();
 
-        let getquestionnaireQuery = `SELECT q.*, s.test_id,g.group_name,t.duration,t.total_marks,t.start_time,t.end_time, s.student_id,t.test_date, t.test_name FROM questionnaire q
+        let getquestionnaireQuery = `SELECT q.*, s.test_id, g.group_name, t.duration, t.total_marks, t.start_time, t.end_time, s.student_id,t.test_date, t.test_name FROM questionnaire q
         LEFT JOIN tests t ON t.test_id = q.test_id
         LEFT JOIN student_registration s ON s.test_id = t.test_id
         LEFT JOIN questionnaire_header qh ON qh.questionnaire_id = q.questionnaire_id
@@ -1087,10 +1087,7 @@ let countQuery = `SELECT COUNT(qa.answer_id) AS total FROM questionnaire q
             };
         }
         return res.status(200).json(data);
-
     } catch (error) {
-        console.log(error);
-        
         await connection.rollback();
         return error500(error, res);
     } finally {
@@ -1345,6 +1342,62 @@ const getResultDashboard = async (req, res) => {
     }
 }
 
+//questionnaire list by id
+const getQuestionnaireAdmin = async (req, res) => {
+    const questionnaireId = parseInt(req.params.id);
+
+    // attempt to obtain a database connection
+    let connection = await getConnection();
+
+    try {
+
+        //start a transaction
+        await connection.beginTransaction();
+
+        let getquestionnaireQuery = `SELECT q.*, s.test_id, g.group_name, t.duration, t.total_marks, t.start_time, t.end_time, s.student_id,t.test_date, t.test_name FROM questionnaire q
+        LEFT JOIN tests t ON t.test_id = q.test_id
+        LEFT JOIN student_registration s ON s.test_id = t.test_id
+        LEFT JOIN questionnaire_header qh ON qh.questionnaire_id = q.questionnaire_id
+        LEFT JOIN groups g ON g.group_id = t.group_id
+        WHERE q.questionnaire_id = ?`;
+        let questionnaireResult = await connection.query(getquestionnaireQuery, [questionnaireId]);
+        if (questionnaireResult[0].length == 0) {
+            return error422("questionnaire Not Found.", res);
+        }
+        const questionnaire = questionnaireResult[0][0];
+
+        //get header
+        let headerQuery = `SELECT qh.questionnaire_header_id, qh.questionnaire_id, qh.question, qh.answer, qh.question_mark, qh.question_type_id, qh.status, qh.cts, qt.question_type FROM questionnaire_header qh
+            LEFT JOIN question_type qt ON qt.question_type_id = qh.question_type_id
+            WHERE qh.questionnaire_id = ? AND qh.status = 1`;
+        let headerResult = await connection.query(headerQuery, [questionnaireId]);
+        let headers = headerResult[0];
+
+        //Loop headers and attach footer inside
+        for (let i = 0; i < headers.length; i++) {
+            const header = headers[i];
+            let footerQuery = `SELECT * FROM questionnaire_footer WHERE questionnaire_header_id = ? AND status = 1`;
+            let footerResult = await connection.query(footerQuery, [header.questionnaire_header_id]);
+
+            //Attach footer inside header
+            headers[i]['questionnaireFooter'] = footerResult[0];
+        }
+
+        // Attach headers to questionnaire
+        questionnaire['questionnaireHeader'] = headers;
+
+        return res.status(200).json({
+            status: 200,
+            message: "questionnaire Retrived Successfully",
+            data: questionnaire
+        });
+    } catch (error) {
+        return error500(error, res);
+    } finally {
+        if (connection) connection.release()
+    }
+}
+
 module.exports = {
     createQuestionnaire,
     getAllQuestionnaire,
@@ -1357,5 +1410,6 @@ module.exports = {
     getAllAnswer,
     getResult,
     getResultDownload,
-    getResultDashboard
+    getResultDashboard,
+    getQuestionnaireAdmin
 }
