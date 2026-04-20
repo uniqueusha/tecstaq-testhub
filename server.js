@@ -5,14 +5,14 @@ const path = require('path');
 const fs = require("fs");
 
 
-/* ?? SSL FILE PATHS */
-const SSL_KEY_PATH = path.join(__dirname, "ssl/keys/tecstaq.rsa.key");
-const SSL_CERT_PATH = path.join(__dirname, "ssl/certs/_tecstaq_com.crt");
+// /* ?? SSL FILE PATHS */
+// const SSL_KEY_PATH = path.join(__dirname, "ssl/keys/tecstaq.rsa.key");
+// const SSL_CERT_PATH = path.join(__dirname, "ssl/certs/_tecstaq_com.crt");
 
-const sslOptions = {
-  key: fs.readFileSync(SSL_KEY_PATH),
-  cert: fs.readFileSync(SSL_CERT_PATH),
-};
+// const sslOptions = {
+//   key: fs.readFileSync(SSL_KEY_PATH),
+//   cert: fs.readFileSync(SSL_CERT_PATH),
+// };
 
 
 const normalizePort = val => {
@@ -60,10 +60,10 @@ const onListening = () => {
 
 const port = normalizePort(process.env.PORT || "3000");
 /* ? HTTPS SERVER */
-const server = https.createServer(sslOptions, app);
+// const server = https.createServer(sslOptions, app);
 app.set("port", port);
 
-// const server = http.createServer(app);
+const server = http.createServer(app);
 server.on("error", onError);
 server.on("listening", onListening);
 
