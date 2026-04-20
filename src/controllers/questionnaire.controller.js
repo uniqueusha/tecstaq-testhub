@@ -957,7 +957,7 @@ const getAllAnswer = async (req, res) => {
             countQuery += ` AND qa.student_id = ${student_id}`;
         }
 
-        getAnswerQuery += " ORDER BY qa.cts DESC";
+        // getAnswerQuery += " ORDER BY qa.cts DESC";
 
         // Apply pagination if both page and perPage are provided
         let total = 0;
@@ -979,7 +979,7 @@ const getAllAnswer = async (req, res) => {
             LEFT JOIN questionnaire_footer qf ON qf.questionnaire_footer_id = qaf.questionnaire_footer_id
             WHERE qaf.answer_id = ${element.answer_id} AND qaf.status = 1`;
 
-            getAnswerFooterQuery += ` ORDER BY qaf.cts DESC`;
+            // getAnswerFooterQuery += ` ORDER BY qaf.cts DESC`;
 
             const answerFooterResult = await connection.query(getAnswerFooterQuery);
             answers[i]['answer'] = answerFooterResult[0];
@@ -1096,7 +1096,7 @@ let countQuery = `SELECT COUNT(qa.answer_id) AS total FROM questionnaire q
 };
 
 const getResult = async (req, res) => {
-    const { page, perPage, student_id, fromDate, toDate,final_result, tab_status } = req.query;
+    const {key, page, perPage, student_id, fromDate, toDate,final_result, tab_status } = req.query;
 
     let connection = await getConnection();
 
